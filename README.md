@@ -22,3 +22,30 @@
 - [Pattern matching]()
 - [String interpolation]()
 - [STDLIB]()
+
+
+
+```avatre
+// proposed syntax (not yet refined)
+@import(test/mod)
+@import(prelude) 
+
+data X = x(...) | y(...);
+
+private fn foobar(x : int) -> int {
+	return 0;
+}
+
+public fn foobar(x : (int) -> int) -> int {
+	...
+}
+
+public fn foo(x : &T) -> int {
+	...
+}
+
+// entrypoint
+fn main() -> void {
+	println("hello world");
+}
+```
