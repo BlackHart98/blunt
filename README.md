@@ -25,6 +25,8 @@
 
 
 
+# Code snippet(tentative)
+
 ```avatre
 // proposed syntax (not yet refined)
 @import(test/mod)
