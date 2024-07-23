@@ -40,31 +40,49 @@ pub enum Lexeme{
 pub fn scan_input<'a>(input : &str) -> Result<Vec<Lexeme>, &'static str>{
     let mut result = Vec::<Lexeme>::new();
     let keywords = HashSet::from(RESERVED_WORDS);
-
+    let list_of_chars = input.chars().collect::<Vec<char>>();
+    let input_len = list_of_chars.len();
+    let mut counter: usize = 0;
+    let mut lookahead = 0;
     // TODO: Implement scanner (stub)
-    for (i, c) in input.chars().enumerate(){
-        match c {
-            ';' => result.push(Lexeme::SpecialChar{token: c.to_string(), pos: i, length: 1}),
-            '+' => result.push(Lexeme::SpecialChar{token: c.to_string(), pos: i, length: 1}),
-            '-' => result.push(Lexeme::SpecialChar{token: c.to_string(), pos: i, length: 1}),
-            '*' => result.push(Lexeme::SpecialChar{token: c.to_string(), pos: i, length: 1}),
-            '^' => result.push(Lexeme::SpecialChar{token: c.to_string(), pos: i, length: 1}),
-            '`' => result.push(Lexeme::SpecialChar{token: c.to_string(), pos: i, length: 1}),
-            '=' => result.push(Lexeme::SpecialChar{token: c.to_string(), pos: i, length: 1}),
-            '/' => result.push(Lexeme::SpecialChar{token: c.to_string(), pos: i, length: 1}),
-            ' ' => result.push(Lexeme::WhiteSpace{token: c.to_string(), pos: i, length: 1}),
-            '\n' => result.push(Lexeme::WhiteSpace{token: c.to_string(), pos: i, length: 1}),
-            '\t' => result.push(Lexeme::WhiteSpace{token: c.to_string(), pos: i, length: 1}),
-            _ => result.push(Lexeme::UnsupportedChar{token: c.to_string(), pos: i, length: 1}),
+    while counter < input_len {
+        let mut token_ = String::from("");
+        token_ = match list_of_chars[counter] {
+            'a'..='z' => {
+                token_.push(list_of_chars[counter]);
+                lookahead = counter + 1;
+                while lookahead < input_len { 
+                    if is_identifier_substring(list_of_chars[lookahead]){
+                        token_.push(list_of_chars[lookahead]);
+                        lookahead += 1;
+                    }else{
+                        break;
+                    }
+                }
+                token_
+            }
+            _ => {
+                lookahead += 1;
+                list_of_chars[counter].to_string()
+                
+            }
+        };
+        if keywords.contains(token_.as_str()){
+            result.push(Lexeme::Keyword{token:token_.to_owned(),pos:counter,length:lookahead});
+        } else{
+            result.push(Lexeme::Identifier{token:token_.to_owned(),pos:counter,length:lookahead});   
         }
+        counter = lookahead;
+        lookahead = counter;
     }
-    
     if !has_unsupported_char(&result) {
-      return Err("unsupported character");  
+        return Err("unsupported character");  
     }   else{
         return Ok(result);
     }
 }
+
+
 
 fn has_unsupported_char(lexemes : &Vec<Lexeme>) -> bool{
     for x in lexemes{
@@ -76,4 +94,28 @@ fn has_unsupported_char(lexemes : &Vec<Lexeme>) -> bool{
     return true
 }
 
-// fn lookahead() -> 
+
+fn is_alphabet(c : char) -> bool{
+    return match c {
+        'a'..='z' => true,
+        'A'..='Z' => true,
+        _ => false
+    };
+}
+
+fn is_number(c : char) -> bool{
+    return match c {
+        '0'..='9' => true,
+        _ => false
+    };
+}
+
+fn is_underscore(c : char) -> bool{
+    return match c {
+        '_' => true,
+        _ => false
+    };
+}
+
+
+fn is_identifier_substring(c : char) -> bool {is_alphabet(c) || is_number(c) || is_underscore(c)}  
