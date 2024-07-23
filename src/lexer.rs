@@ -1,29 +1,44 @@
 #[derive(Debug, PartialEq)]
-pub enum Lexeme<'a>{
-    Keyword{token: &'a str, pos: u32, length: u32},
-    SpecialChar{token: &'a str, pos: u32, length: u32},
-    WhiteSpace{token: &'a str, pos: u32, length: u32},
-    Number{token: &'a str, pos: u32, length: u32},
-    BinOp{token: &'a str, pos: u32, length: u32},
-    Comment{token: &'a str, pos: u32, length: u32},
-    ForwardArrow{token: &'a str, pos: u32, length: u32},
-    Yield{token: &'a str, pos: u32, length: u32},
-    UnsupportedToken{token: &'a str, pos: u32, length: u32},
-    Identifier{token: &'a str, pos: u32, length: u32},
-    StringLiteralSingle{token: &'a str, pos: u32, length: u32},
-    StringLiteralDouble{token: &'a str, pos: u32, length: u32},
+pub enum Lexeme{
+    Keyword{token: String, pos: usize, length: usize},
+    SpecialChar{token: String, pos: usize, length: usize},
+    WhiteSpace{token: String, pos: usize, length: usize},
+    Number{token: String, pos: usize, length: usize},
+    BinOp{token: String, pos: usize, length: usize},
+    Comment{token: String, pos: usize, length: usize},
+    ForwardArrow{token: String, pos: usize, length: usize},
+    Yield{token: String, pos: usize, length: usize},
+    UnsupportedChar{token: String, pos: usize, length: usize},
+    Identifier{token: String, pos: usize, length: usize},
+    StringLiteralSingle{token: String, pos: usize, length: usize},
+    StringLiteralDouble{token: String, pos: usize, length: usize},
 }
 
 
-pub fn scan_string<'a>(input : &'a str) -> Result<Vec<Lexeme>, &'static str>{
-    let mut foo = String::from(input);
-    println!("Scanning...\n {:?}", foo);
+pub fn scan_input<'a>(input : &str) -> Result<Vec<Lexeme>, &'static str>{
+    let mut result = Vec::<Lexeme>::new();
     for (i, c) in input.chars().enumerate(){
-        println!("pos-char pair => {:?} : {:?}", i, c);
+        match c {
+            ';' => result.push(Lexeme::SpecialChar{token: c.to_string(), pos: i, length: 1}),
+            _ => result.push(Lexeme::UnsupportedChar{token: c.to_string(), pos: i, length: 1}),
+        }
     }
-
-    return Err("scanner failed");
+    let foo = has_unsupported_char(&result);
+    if foo {
+      return Err("unsupported character");  
+    }   else{
+        return Ok(result);
+    }
 }
 
+fn has_unsupported_char(lexemes : &Vec<Lexeme>) -> bool{
+    for x in lexemes{
+        match x{
+            Lexeme::UnsupportedChar{token:_,pos:_,length:_} => return false,
+            _ => continue
+        }
+    }
+    return true
+}
 
 // fn lookahead() -> 
