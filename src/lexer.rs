@@ -6,8 +6,6 @@ use crate::utils::{
 
 #[allow(dead_code)]
 
-
-
 const RESERVED_WORDS: [&'static str; 39] 
     = [
         // keywords
@@ -25,7 +23,7 @@ const RESERVED_WORDS: [&'static str; 39]
 
 
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TType{
     Keyword(String),
     Num(String),
@@ -38,6 +36,7 @@ pub enum TType{
     SpecialChar(String),
     GenericSymbol,
     Yield,
+    FwdArr,
     Wildcard,
     Plus,
     Minus,
@@ -57,9 +56,16 @@ pub enum TType{
     HorizontalWhtSpc,
     Comma,
     Dot,
+    UpperBound,
+    OpenPar,
+    ClosePar,
+    OpenCurly,
+    CloseCurly,
+    OpenBracket,
+    CloseBracket
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Token{
     token_type : TType,
     position : usize,
@@ -87,54 +93,83 @@ pub fn scan_input<'a>(input : &str) -> Result<Vec<Token>, &'static str>{
     if !has_unsupported_char(&result) {
         return Err("unsupported character");  
     }   else{
-        return Ok(result);
+        return Ok(filter_whitespace(&result));
     }
 }
 
-fn emit_token(pos : usize, list_of_chars : &Vec<char>, input_len : usize, newline_count : usize) -> (Token, usize, usize) {
+
+fn emit_token(
+    pos : usize, 
+    list_of_chars : &Vec<char>, 
+    input_len : usize, 
+    newline_count : usize) -> (Token, usize, usize) {
+
     let mut lookahead = pos;
     let mut token_ = String::from("");
-    let keywords = HashSet::from(RESERVED_WORDS);
+    // let keywords = HashSet::from(RESERVED_WORDS);
     let mut newline_count = newline_count;
     return match list_of_chars[pos] {
         'a'..='z' => {
-            (token_, lookahead) = finite_automaton(pos, list_of_chars, input_len, is_identifier_substring);
-            if keywords.contains(token_.as_str()) {
+            get_keyword_or_id(pos, list_of_chars, input_len, newline_count)
+        }
+        'A'..='Z' => {
+            get_keyword_or_id(pos, list_of_chars, input_len, newline_count)
+        }
+        '+' => {
+            token_.push(list_of_chars[pos]);
+            lookahead = pos + 1;
+            if list_of_chars[lookahead] == '='{
+                token_.push(list_of_chars[lookahead]);
+                lookahead += 1;
                 (
                     Token{
-                        token_type: TType::Keyword(token_.to_owned()), 
+                        token_type: TType::Incr, 
                         position: pos, 
                         length: lookahead, 
                         line_no: newline_count
                     }
                     , lookahead, newline_count
                 )
-            } else {
+            } else{
                 (
                     Token{
-                        token_type: TType::Id(token_.to_owned()), 
+                        token_type: TType::Plus, 
                         position: pos, 
                         length: lookahead, 
                         line_no: newline_count
                     }
                     , lookahead, newline_count
-
                 )
             }
         }
-        'A'..='Z' => {
-            (token_, lookahead) = finite_automaton(pos, list_of_chars, input_len, is_identifier_substring);
-            (
-                Token{
-                    token_type: TType::Id(token_.to_owned()), 
-                    position: pos, 
-                    length: lookahead, 
-                    line_no: newline_count
-                }
-                , lookahead, newline_count
-            )
+        '*' => {
+            token_.push(list_of_chars[pos]);
+            lookahead = pos + 1;
+            if list_of_chars[lookahead] == '='{
+                token_.push(list_of_chars[lookahead]);
+                lookahead += 1;
+                (
+                    Token{
+                        token_type: TType::Incr, 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+                )
+            } else{
+                (
+                    Token{
+                        token_type: TType::Plus, 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+                )
+            }
         }
-        '+' => {
+        '/' => {
             token_.push(list_of_chars[pos]);
             lookahead = pos + 1;
             if list_of_chars[lookahead] == '='{
@@ -253,7 +288,7 @@ fn emit_token(pos : usize, list_of_chars : &Vec<char>, input_len : usize, newlin
                     }
                     , lookahead, newline_count
                 )
-            }else{
+            } else {
                 (
                     Token{
                         token_type: TType::Gt, 
@@ -273,6 +308,18 @@ fn emit_token(pos : usize, list_of_chars : &Vec<char>, input_len : usize, newlin
                 (
                     Token{
                         token_type: TType::Lte, 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+                )
+            } else if list_of_chars[lookahead] == ':'{
+                token_.push(list_of_chars[lookahead]);
+                lookahead += 1;
+                (
+                    Token{
+                        token_type: TType::UpperBound, 
                         position: pos, 
                         length: lookahead, 
                         line_no: newline_count
@@ -318,7 +365,19 @@ fn emit_token(pos : usize, list_of_chars : &Vec<char>, input_len : usize, newlin
                     }
                     , lookahead, newline_count
                 )
-            } else{
+            } else if list_of_chars[lookahead] == '>'{
+                token_.push(list_of_chars[lookahead]);
+                lookahead += 1;
+                (
+                    Token{
+                        token_type: TType::FwdArr, 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+                )
+            } else {
                 (
                     Token{
                         token_type: TType::Minus, 
@@ -492,6 +551,81 @@ fn emit_token(pos : usize, list_of_chars : &Vec<char>, input_len : usize, newlin
                 )
             }
         }
+        '[' => {
+            lookahead += 1;
+            (
+                Token{
+                    token_type: TType::OpenBracket, 
+                    position: pos, 
+                    length: lookahead, 
+                    line_no: newline_count
+                }
+                , lookahead, newline_count
+            )
+        }
+        ']' => {
+            lookahead += 1;
+            (
+                Token{
+                    token_type: TType::CloseBracket, 
+                    position: pos, 
+                    length: lookahead, 
+                    line_no: newline_count
+                }
+                , lookahead, newline_count
+            )
+        }
+        '(' => {
+            lookahead += 1;
+            (
+                Token{
+                    token_type: TType::OpenPar, 
+                    position: pos, 
+                    length: lookahead, 
+                    line_no: newline_count
+                }
+                , lookahead, newline_count
+            )
+        }
+        ')' => {
+            lookahead += 1;
+            (
+                Token{
+                    token_type: TType::ClosePar, 
+                    position: pos, 
+                    length: lookahead, 
+                    line_no: newline_count
+                }
+                , lookahead, newline_count
+            )
+        } 
+        '{' => {
+            lookahead += 1;
+            (
+                Token{
+                    token_type: TType::OpenCurly, 
+                    position: pos, 
+                    length: lookahead, 
+                    line_no: newline_count
+                }
+                , lookahead, newline_count
+            )
+        }
+        '}' => {
+            lookahead += 1;
+            (
+                Token{
+                    token_type: TType::CloseCurly, 
+                    position: pos, 
+                    length: lookahead, 
+                    line_no: newline_count
+                }
+                , lookahead, newline_count
+            )
+        }
+        '\'' => {
+            get_string_lit(pos, list_of_chars, input_len, newline_count)
+        }
         _ => {
             lookahead += 1;
             (
@@ -507,6 +641,72 @@ fn emit_token(pos : usize, list_of_chars : &Vec<char>, input_len : usize, newlin
     };
 }
 
+fn get_keyword_or_id(
+    pos : usize, 
+    list_of_chars : &Vec<char>, 
+    input_len : usize, 
+    newline_count : usize
+) -> (Token, usize, usize){
+
+    let keywords = HashSet::from(RESERVED_WORDS);
+    let lookahead:usize;
+    let token_: String;
+    (token_, lookahead) = finite_automaton(pos, list_of_chars, input_len, is_identifier_substring);
+    if keywords.contains(token_.as_str()) {
+        (
+            Token{
+                token_type: TType::Keyword(token_.to_owned()), 
+                position: pos, 
+                length: lookahead, 
+                line_no: newline_count
+            }
+            , lookahead, newline_count
+        )
+    } else {
+        (
+            Token{
+                token_type: TType::Id(token_.to_owned()), 
+                position: pos, 
+                length: lookahead, 
+                line_no: newline_count
+            }
+            , lookahead, newline_count
+
+        )
+    }
+}
+
+
+fn get_string_lit(
+    pos : usize, 
+    list_of_chars : &Vec<char>, 
+    input_len : usize, 
+    newline_count : usize
+) -> (Token, usize, usize){
+    let lookahead = pos + 1;
+    (
+        Token{
+            token_type: TType::Id(String::from("\'\'")), 
+            position: pos, 
+            length: lookahead, 
+            line_no: newline_count
+        }
+        , lookahead, newline_count
+
+    )
+}
+
+fn filter_whitespace(tokens : &Vec<Token>) -> Vec<Token> {
+    let mut result : Vec<Token> = vec![];
+    for x in tokens {
+        match x {
+            Token{token_type:TType::NewLine, position:_, length:_, line_no:_} => continue,
+            Token{token_type:TType::HorizontalWhtSpc, position:_, length:_, line_no:_} => continue,
+            _ => result.push(x.to_owned())
+        }
+    }
+    result
+}
 
 
 fn has_unsupported_char(lexemes : &Vec<Token>) -> bool{
