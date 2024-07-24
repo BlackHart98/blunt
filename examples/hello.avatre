@@ -1,5 +1,4 @@
-fn foo(){
-    return a + b;
-}
 
-data Result = ok();
+
+var result = a + 2 + 3.0;
+
