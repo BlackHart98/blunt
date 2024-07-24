@@ -108,7 +108,7 @@ fn emit_token(pos : usize, list_of_chars : &Vec<char>, input_len : usize) -> (Le
                     break;
                 }
             }
-            (Lexeme::HorizontalWhiteSpace{token:list_of_chars[pos].to_string(), pos:pos, length:lookahead}, lookahead)
+            (Lexeme::HorizontalWhiteSpace{token:token_.to_owned(), pos:pos, length:lookahead}, lookahead)
         }
         _ => {
             lookahead += 1;
