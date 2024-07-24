@@ -25,7 +25,8 @@ const RESERVED_WORDS: [&'static str; 36]
 pub enum Lexeme{
     Keyword{token: String, pos: usize, length: usize},
     SpecialChar{token: String, pos: usize, length: usize},
-    WhiteSpace{token: String, pos: usize, length: usize},
+    VerticalWhiteSpace{token: String, pos: usize, length: usize},
+    HorizontalWhiteSpace{token: String, pos: usize, length: usize},
     Number{token: String, pos: usize, length: usize},
     BinOp{token: String, pos: usize, length: usize},
     CommentSingleLine{token: String, pos: usize, length: usize},
@@ -95,6 +96,19 @@ fn emit_token(pos : usize, list_of_chars : &Vec<char>, input_len : usize) -> (Le
         '+' => {
             lookahead += 1;
             (Lexeme::SpecialChar{token:list_of_chars[pos].to_string(), pos:pos, length:lookahead}, lookahead)
+        }
+        ' ' => {
+            token_.push(list_of_chars[pos]);
+            lookahead = pos + 1;
+            while lookahead < input_len { 
+                if list_of_chars[lookahead] == ' '{
+                    token_.push(list_of_chars[lookahead]);
+                    lookahead += 1;
+                }else{
+                    break;
+                }
+            }
+            (Lexeme::HorizontalWhiteSpace{token:list_of_chars[pos].to_string(), pos:pos, length:lookahead}, lookahead)
         }
         _ => {
             lookahead += 1;

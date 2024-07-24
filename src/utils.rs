@@ -21,4 +21,4 @@ pub fn is_underscore(c : char) -> bool{
 }
 
 
-pub fn is_identifier_substring(c : char) -> bool {is_alphabet(c) || is_number(c) || is_underscore(c)}  
+pub fn is_identifier_substring(c : char) -> bool {c.is_alphanumeric() || is_underscore(c)}  

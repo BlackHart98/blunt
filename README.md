@@ -51,3 +51,24 @@ fn main() -> void {
 	println("hello world");
 }
 ```
+
+
+# Reserved words
+The following are the list of reserved words in Avatre
+
+```avatre
+
+// keywords
+"fn", "if", "@import", "@extend", "let",
+"const", "return", "visit", "top_down", "bottom_up",
+"innermost", "fail", "insert", "outermost", "top_down_break",
+"for", "elif", "else","@external","@sypnosis","typedef",
+"data",
+
+// data types
+"any","num","int","str","real",
+"list","tuple","rel","lrel","map",
+"void","set","node","loc",
+
+
+```
