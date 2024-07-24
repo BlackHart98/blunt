@@ -37,49 +37,69 @@ pub enum Lexeme{
     StringLiteralDouble{token: String, pos: usize, length: usize},
 }
 
+
 pub fn scan_input<'a>(input : &str) -> Result<Vec<Lexeme>, &'static str>{
     let mut result = Vec::<Lexeme>::new();
-    let keywords = HashSet::from(RESERVED_WORDS);
     let list_of_chars = input.chars().collect::<Vec<char>>();
     let input_len = list_of_chars.len();
     let mut counter: usize = 0;
-    let mut lookahead = 0;
+    let mut token_lexeme:Lexeme;
     // TODO: Implement scanner (stub)
     while counter < input_len {
-        let mut token_ = String::from("");
-        token_ = match list_of_chars[counter] {
-            'a'..='z' => {
-                token_.push(list_of_chars[counter]);
-                lookahead = counter + 1;
-                while lookahead < input_len { 
-                    if is_identifier_substring(list_of_chars[lookahead]){
-                        token_.push(list_of_chars[lookahead]);
-                        lookahead += 1;
-                    }else{
-                        break;
-                    }
-                }
-                token_
-            }
-            _ => {
-                lookahead += 1;
-                list_of_chars[counter].to_string()
-                
-            }
-        };
-        if keywords.contains(token_.as_str()){
-            result.push(Lexeme::Keyword{token:token_.to_owned(),pos:counter,length:lookahead});
-        } else{
-            result.push(Lexeme::Identifier{token:token_.to_owned(),pos:counter,length:lookahead});   
-        }
-        counter = lookahead;
-        lookahead = counter;
+        (token_lexeme, counter,) = emit_token(counter, &list_of_chars, input_len);
+        result.push(token_lexeme);   
     }
     if !has_unsupported_char(&result) {
         return Err("unsupported character");  
     }   else{
         return Ok(result);
     }
+}
+
+fn emit_token(pos : usize, list_of_chars : &Vec<char>, input_len : usize) -> (Lexeme, usize) {
+    let mut lookahead = pos;
+    let mut token_ = String::from("");
+    let keywords = HashSet::from(RESERVED_WORDS);
+    return match list_of_chars[pos] {
+        'a'..='z' => {
+            token_.push(list_of_chars[pos]);
+            lookahead = pos + 1;
+            while lookahead < input_len { 
+                if is_identifier_substring(list_of_chars[lookahead]){
+                    token_.push(list_of_chars[lookahead]);
+                    lookahead += 1;
+                }else{
+                    break;
+                }
+            }
+            if keywords.contains(token_.as_str()){
+                (Lexeme::Keyword{token:token_.to_owned(), pos:pos, length:lookahead}, lookahead)
+            } else{
+                (Lexeme::Identifier{token:token_.to_owned(), pos:pos, length:lookahead}, lookahead)   
+            }
+        }
+        'A'..='Z' => {
+            token_.push(list_of_chars[pos]);
+            lookahead = pos + 1;
+            while lookahead < input_len { 
+                if is_identifier_substring(list_of_chars[lookahead]){
+                    token_.push(list_of_chars[lookahead]);
+                    lookahead += 1;
+                }else{
+                    break;
+                }
+            }
+            (Lexeme::Identifier{token:token_.to_owned(), pos:pos, length:lookahead}, lookahead)   
+        }
+        '+' => {
+            lookahead += 1;
+            (Lexeme::SpecialChar{token:list_of_chars[pos].to_string(), pos:pos, length:lookahead}, lookahead)
+        }
+        _ => {
+            lookahead += 1;
+            (Lexeme::SpecialChar{token:list_of_chars[pos].to_string(), pos:pos, length:lookahead}, lookahead)
+        }
+    };
 }
 
 
