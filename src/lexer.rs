@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use crate::utils::is_identifier_substring;
 
 #[allow(dead_code)]
 
@@ -103,7 +104,6 @@ fn emit_token(pos : usize, list_of_chars : &Vec<char>, input_len : usize) -> (Le
 }
 
 
-
 fn has_unsupported_char(lexemes : &Vec<Lexeme>) -> bool{
     for x in lexemes{
         match x{
@@ -113,29 +113,3 @@ fn has_unsupported_char(lexemes : &Vec<Lexeme>) -> bool{
     }
     return true
 }
-
-
-fn is_alphabet(c : char) -> bool{
-    return match c {
-        'a'..='z' => true,
-        'A'..='Z' => true,
-        _ => false
-    };
-}
-
-fn is_number(c : char) -> bool{
-    return match c {
-        '0'..='9' => true,
-        _ => false
-    };
-}
-
-fn is_underscore(c : char) -> bool{
-    return match c {
-        '_' => true,
-        _ => false
-    };
-}
-
-
-fn is_identifier_substring(c : char) -> bool {is_alphabet(c) || is_number(c) || is_underscore(c)}  
