@@ -29,11 +29,12 @@ pub enum TType{
     Num(String),
     CmtSingleLine(String),
     CmtMultiLine(String),
-    UnsupportedChar(String),
+    UnsupportedToken(String),
     Id(String),
     StrLitSingle(String),
     StrLitDouble(String),
     SpecialChar(String),
+    Pipe,
     GenericSymbol,
     Yield,
     FwdArr,
@@ -94,7 +95,7 @@ pub fn scan_input<'a>(input : &str) -> Result<Vec<Token>, &'static str>{
         result.push(token_lexeme);   
     }
     if !has_unsupported_char(&result) {
-        return Err("unsupported character");  
+        return Err("unsupported token");  
     }   else{
         return Ok(filter_whitespace(&result));
     }
@@ -126,7 +127,7 @@ fn emit_token(
                 if list_of_chars[lookahead].is_numeric() {
                     token_.push(list_of_chars[lookahead]);
                     lookahead += 1;
-                }else if list_of_chars[lookahead] == '.' &&  !found_dot{
+                }else if list_of_chars[lookahead] == '.' &&  !found_dot {
                     token_.push(list_of_chars[lookahead]);
                     found_dot = true;
                     lookahead += 1;
@@ -137,14 +138,26 @@ fn emit_token(
                     token_.push(list_of_chars[lookahead]);
                     return (
                         Token{
-                            token_type: TType::UnsupportedChar(token_.to_owned()), 
+                            token_type: TType::UnsupportedToken(token_.to_owned()), 
                             position: pos, 
                             length: lookahead, 
                             line_no: newline_count
                         }
                         , lookahead, newline_count
                     );
-                } else {
+                } else if list_of_chars[lookahead].is_alphabetic() {
+                    token_.push(list_of_chars[lookahead]);
+                    lookahead += 1;
+                    return (
+                        Token{
+                            token_type: TType::UnsupportedToken(token_.to_owned()), 
+                            position: pos, 
+                            length: lookahead, 
+                            line_no: newline_count
+                        }
+                        , lookahead, newline_count
+                    );
+                } else  {
                     break;
                 }
             }
@@ -165,6 +178,18 @@ fn emit_token(
                 if list_of_chars[lookahead].is_numeric() {
                     token_.push(list_of_chars[lookahead]);
                     lookahead += 1;
+                } else if list_of_chars[lookahead].is_alphabetic() {
+                    token_.push(list_of_chars[lookahead]);
+                    lookahead += 1;
+                    return (
+                        Token{
+                            token_type: TType::UnsupportedToken(token_.to_owned()), 
+                            position: pos, 
+                            length: lookahead, 
+                            line_no: newline_count
+                        }
+                        , lookahead, newline_count
+                    );
                 } else {
                     break;
                 }
@@ -542,7 +567,19 @@ fn emit_token(
                     token_.push(list_of_chars[lookahead]);
                     return (
                         Token{
-                            token_type: TType::UnsupportedChar(token_.to_owned()), 
+                            token_type: TType::UnsupportedToken(token_.to_owned()), 
+                            position: pos, 
+                            length: lookahead, 
+                            line_no: newline_count
+                        }
+                        , lookahead, newline_count
+                    );
+                } else if list_of_chars[lookahead].is_alphabetic() {
+                    token_.push(list_of_chars[lookahead]);
+                    lookahead += 1;
+                    return (
+                        Token{
+                            token_type: TType::UnsupportedToken(token_.to_owned()), 
                             position: pos, 
                             length: lookahead, 
                             line_no: newline_count
@@ -677,6 +714,9 @@ fn emit_token(
         '\'' => {
             get_string_lit(pos, list_of_chars, input_len, newline_count)
         }
+        '\"' => {
+            get_string_lit(pos, list_of_chars, input_len, newline_count)
+        }
         '&' => {
             token_.push(list_of_chars[pos]);
             lookahead = pos + 1;
@@ -695,7 +735,7 @@ fn emit_token(
             } else{
                 (
                     Token{
-                        token_type: TType::UnsupportedChar(token_.to_owned()), 
+                        token_type: TType::UnsupportedToken(token_.to_owned()), 
                         position: pos, 
                         length: lookahead, 
                         line_no: newline_count
@@ -719,10 +759,22 @@ fn emit_token(
                     }
                     , lookahead, newline_count
                 )
+            } else if list_of_chars[lookahead] == '>' {
+                token_.push(list_of_chars[lookahead]);
+                lookahead += 1;
+                (
+                    Token{
+                        token_type: TType::Pipe, 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+                )
             } else{
                 (
                     Token{
-                        token_type: TType::UnsupportedChar(token_.to_owned()), 
+                        token_type: TType::UnsupportedToken(token_.to_owned()), 
                         position: pos, 
                         length: lookahead, 
                         line_no: newline_count
@@ -735,7 +787,7 @@ fn emit_token(
             lookahead += 1;
             (
                 Token{
-                    token_type: TType::UnsupportedChar(list_of_chars[pos].to_string()), 
+                    token_type: TType::UnsupportedToken(list_of_chars[pos].to_string()), 
                     position: pos, 
                     length: lookahead, 
                     line_no: newline_count
@@ -801,6 +853,9 @@ fn get_string_lit(
     )
 }
 
+
+// fn get_number() ->
+
 fn filter_whitespace(tokens : &Vec<Token>) -> Vec<Token> {
     let mut result : Vec<Token> = vec![];
     for x in tokens {
@@ -818,7 +873,7 @@ fn has_unsupported_char(lexemes : &Vec<Token>) -> bool{
     for x in lexemes{
         match x{
             Token{
-                token_type: TType::UnsupportedChar(_), 
+                token_type: TType::UnsupportedToken(_), 
                 position: _, 
                 length: _, 
                 line_no: _
