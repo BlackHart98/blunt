@@ -1,7 +1,7 @@
+var result += a + aA + Ab - 2 && 3.0;
 
+if n == 0
 
-var result = a + aA + Ab - 2 + 3.0;
-
-fn main() -> void {
+fn main(test : $1 <: int) -> void {
 	println();
 }

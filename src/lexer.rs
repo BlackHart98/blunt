@@ -62,7 +62,10 @@ pub enum TType{
     OpenCurly,
     CloseCurly,
     OpenBracket,
-    CloseBracket
+    CloseBracket,
+    And,
+    Or,
+    Not
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -114,6 +117,67 @@ fn emit_token(
         }
         'A'..='Z' => {
             get_keyword_or_id(pos, list_of_chars, input_len, newline_count)
+        }
+        '0'..='9' => {
+            token_.push(list_of_chars[pos]);
+            lookahead = pos + 1;
+            let mut found_dot = false;
+            while lookahead < input_len { 
+                if list_of_chars[lookahead].is_numeric() {
+                    token_.push(list_of_chars[lookahead]);
+                    lookahead += 1;
+                }else if list_of_chars[lookahead] == '.' &&  !found_dot{
+                    token_.push(list_of_chars[lookahead]);
+                    found_dot = true;
+                    lookahead += 1;
+                } else if list_of_chars[lookahead].is_numeric() && found_dot {
+                    token_.push(list_of_chars[lookahead]);
+                    lookahead += 1;
+                } else if list_of_chars[lookahead] == '.' &&  found_dot {
+                    token_.push(list_of_chars[lookahead]);
+                    return (
+                        Token{
+                            token_type: TType::UnsupportedChar(token_.to_owned()), 
+                            position: pos, 
+                            length: lookahead, 
+                            line_no: newline_count
+                        }
+                        , lookahead, newline_count
+                    );
+                } else {
+                    break;
+                }
+            }
+            (
+                Token{
+                    token_type: TType::Num(token_.to_owned()), 
+                    position: pos, 
+                    length: lookahead, 
+                    line_no: newline_count
+                }
+                , lookahead, newline_count
+            )
+        }
+        '$' => {
+            token_.push(list_of_chars[pos]);
+            lookahead = pos + 1;
+            while lookahead < input_len { 
+                if list_of_chars[lookahead].is_numeric() {
+                    token_.push(list_of_chars[lookahead]);
+                    lookahead += 1;
+                } else {
+                    break;
+                }
+            }
+            (
+                Token{
+                    token_type: TType::GenericSymbol, 
+                    position: pos, 
+                    length: lookahead, 
+                    line_no: newline_count
+                }
+                , lookahead, newline_count
+            )
         }
         '+' => {
             token_.push(list_of_chars[pos]);
@@ -459,46 +523,6 @@ fn emit_token(
                 , lookahead, newline_count
             )
         }
-        '0'..='9' => {
-            token_.push(list_of_chars[pos]);
-            lookahead = pos + 1;
-            let mut found_dot = false;
-            while lookahead < input_len { 
-                if list_of_chars[lookahead].is_numeric() {
-                    token_.push(list_of_chars[lookahead]);
-                    lookahead += 1;
-                }else if list_of_chars[lookahead] == '.' &&  !found_dot{
-                    token_.push(list_of_chars[lookahead]);
-                    found_dot = true;
-                    lookahead += 1;
-                } else if list_of_chars[lookahead].is_numeric() && found_dot {
-                    token_.push(list_of_chars[lookahead]);
-                    lookahead += 1;
-                } else if list_of_chars[lookahead] == '.' &&  found_dot {
-                    token_.push(list_of_chars[lookahead]);
-                    return (
-                        Token{
-                            token_type: TType::UnsupportedChar(token_.to_owned()), 
-                            position: pos, 
-                            length: lookahead, 
-                            line_no: newline_count
-                        }
-                        , lookahead, newline_count
-                    );
-                } else {
-                    break;
-                }
-            }
-            (
-                Token{
-                    token_type: TType::Num(token_.to_owned()), 
-                    position: pos, 
-                    length: lookahead, 
-                    line_no: newline_count
-                }
-                , lookahead, newline_count
-            )
-        }
         '.' => {
             token_.push(list_of_chars[pos]);
             lookahead = pos + 1;
@@ -543,6 +567,33 @@ fn emit_token(
                 (
                     Token{
                         token_type: TType::Dot, 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+                )
+            }
+        }
+        '!' => {
+            token_.push(list_of_chars[pos]);
+            lookahead = pos + 1;
+            if list_of_chars[lookahead] == '='{
+                token_.push(list_of_chars[lookahead]);
+                lookahead += 1;
+                (
+                    Token{
+                        token_type: TType::Neq, 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+                )
+            } else{
+                (
+                    Token{
+                        token_type: TType::Not, 
                         position: pos, 
                         length: lookahead, 
                         line_no: newline_count
@@ -625,6 +676,60 @@ fn emit_token(
         }
         '\'' => {
             get_string_lit(pos, list_of_chars, input_len, newline_count)
+        }
+        '&' => {
+            token_.push(list_of_chars[pos]);
+            lookahead = pos + 1;
+            if list_of_chars[lookahead] == '&'{
+                token_.push(list_of_chars[lookahead]);
+                lookahead += 1;
+                (
+                    Token{
+                        token_type: TType::And, 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+                )
+            } else{
+                (
+                    Token{
+                        token_type: TType::UnsupportedChar(token_.to_owned()), 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+                )
+            }
+        }
+        '|' => {
+            token_.push(list_of_chars[pos]);
+            lookahead = pos + 1;
+            if list_of_chars[lookahead] == '|'{
+                token_.push(list_of_chars[lookahead]);
+                lookahead += 1;
+                (
+                    Token{
+                        token_type: TType::And, 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+                )
+            } else{
+                (
+                    Token{
+                        token_type: TType::UnsupportedChar(token_.to_owned()), 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+                )
+            }
         }
         _ => {
             lookahead += 1;
