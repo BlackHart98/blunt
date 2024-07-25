@@ -39,7 +39,7 @@ Below is the hierarchy of types in the avatre language from lowest to highest
     │           │           │           │           │           │           │           │           │           │
     │           │           │           │           │           │           │           │           │           │
    ┌─────┐   ┌────────┐   ┌────────┐   ┌────────┐   ┌───────┐   ┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐
-   │ int │   │  real  │   │  bool  │   │  str   │◄──│ list  │   │ tuple  │   │  set   │   │  rel   │   │  map   │   │  node  │
+   │ int │   │  real  │   │  bool  │   │  str   │◄──│ list  │   │ tuple  │◄──│  set   │   │  rel   │   │  map   │   │  node  │
    └─────┘   └────────┘   └────────┘   └────────┘   └───────┘   └────────┘   └────────┘   └────────┘   └────────┘   └────────┘
     ▲           ▲           ▲           ▲           ▲           ▲           ▲           ▲           ▲           ▲
     │           │           │           │           │           │           │           │           │           │
