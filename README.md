@@ -28,7 +28,7 @@
 # Code snippet(tentative)
 
 ```avatre
-@import("prelude")
+@import(prelude)
 
 var result += a + aA + Ab - 2 && 3.0 + .04;
 

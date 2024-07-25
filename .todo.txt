@@ -1,4 +1,4 @@
 TODO
 
-- Implement string lexer
+- Implement comment lexer
 - Refactor `emit_token`
