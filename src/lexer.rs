@@ -18,7 +18,7 @@ const RESERVED_WORDS: [&'static str; 41]
          // data types
         "any","num","int","str","real",
         "list","tuple","rel","lrel","map",
-        "void","set","node","loc",
+        "void","set","node","loc", "itr"
     ];
 
 
