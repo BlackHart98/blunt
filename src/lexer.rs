@@ -66,7 +66,8 @@ pub enum TType{
     CloseBracket,
     And,
     Or,
-    Not
+    Not,
+    Combine,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -110,7 +111,7 @@ fn emit_token(
 
     let mut lookahead = pos;
     let mut token_ = String::from("");
-    // let keywords = HashSet::from(RESERVED_WORDS);
+    let keywords = HashSet::from(RESERVED_WORDS);
     let mut newline_count = newline_count;
     return match list_of_chars[pos] {
         'a'..='z' => {
@@ -203,6 +204,51 @@ fn emit_token(
                 }
                 , lookahead, newline_count
             )
+        }
+        '@' => {
+            token_.push(list_of_chars[pos]);
+            lookahead = pos + 1;
+            while lookahead < input_len { 
+                if list_of_chars[lookahead].is_lowercase() {
+                    token_.push(list_of_chars[lookahead]);
+                    lookahead += 1;
+                } else if list_of_chars[lookahead].is_numeric() {
+                    token_.push(list_of_chars[lookahead]);
+                    lookahead += 1;
+                    return (
+                        Token{
+                            token_type: TType::UnsupportedToken(token_.to_owned()), 
+                            position: pos, 
+                            length: lookahead, 
+                            line_no: newline_count
+                        }
+                        , lookahead, newline_count
+                    );
+                } else {
+                    break;
+                }
+            }
+            if keywords.contains(token_.as_str()){
+                (
+                    Token{
+                        token_type: TType::Keyword(token_.to_owned()), 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+                )
+            } else {
+                (
+                    Token{
+                        token_type: TType::UnsupportedToken(token_.to_owned()), 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+                )
+            }
         }
         '+' => {
             token_.push(list_of_chars[pos]);
@@ -764,17 +810,17 @@ fn emit_token(
                 lookahead += 1;
                 (
                     Token{
-                        token_type: TType::Pipe, 
+                        token_type: TType::Combine, 
                         position: pos, 
                         length: lookahead, 
                         line_no: newline_count
                     }
                     , lookahead, newline_count
                 )
-            } else{
+            } else {
                 (
                     Token{
-                        token_type: TType::UnsupportedToken(token_.to_owned()), 
+                        token_type: TType::Pipe, 
                         position: pos, 
                         length: lookahead, 
                         line_no: newline_count

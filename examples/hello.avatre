@@ -1,4 +1,9 @@
+@import()
+
 var result += a + aA + Ab - 2 && 3.0 + .04;
+
+data X = x() | y();
+
 
 if n == 0
 
