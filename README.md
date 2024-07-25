@@ -28,27 +28,22 @@
 # Code snippet(tentative)
 
 ```avatre
-// proposed syntax (not yet refined)
-@import(test/mod)
-@import(prelude) 
+@import("prelude")
 
-data X = x(...) | y(...);
+var result += a + aA + Ab - 2 && 3.0 + .04;
 
-private fn foobar(x : int) -> int {
-	return 0;
+data X = x("\"") | y();
+
+
+if n == 0
+
+fn foo(x: $1 <: int): fn($1) -> $2 {
+    return x |> y |> z;
 }
 
-public fn foobar(x : (int) -> int) -> int {
-	...
-}
 
-public fn foo(x : &T) -> int {
-	...
-}
-
-// entrypoint
-fn main() -> void {
-	println("hello world");
+fn main(args : list[str]): void {
+	println();
 }
 ```
 
@@ -59,11 +54,11 @@ The following are the list of reserved words in Avatre
 ```avatre
 
 // keywords
-"fn", "if", "@import", "@extend", "let",
+"fn", "if", "@import", "@extend", "var",
 "const", "return", "visit", "top_down", "bottom_up",
 "innermost", "fail", "insert", "outermost", "top_down_break",
 "for", "elif", "else","@external","@sypnosis","typedef",
-"data",
+"data", "in", "true", "false", "try", "catch",
 
 // data types
 "any","num","int","str","real",

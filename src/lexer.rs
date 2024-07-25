@@ -6,14 +6,14 @@ use crate::utils::{
 
 #[allow(dead_code)]
 
-const RESERVED_WORDS: [&'static str; 39] 
+const RESERVED_WORDS: [&'static str; 41] 
     = [
         // keywords
         "fn", "if", "@import", "@extend", "var",
         "const", "return", "visit", "top_down", "bottom_up",
         "innermost", "fail", "insert", "outermost", "top_down_break",
         "for", "elif", "else","@external","@sypnosis","typedef",
-        "data", "in", "true", "false",
+        "data", "in", "true", "false", "try", "catch",
 
          // data types
         "any","num","int","str","real",
@@ -758,10 +758,10 @@ fn emit_token(
             )
         }
         '\'' => {
-            get_string_lit(pos, list_of_chars, input_len, newline_count)
+            get_sstring_lit(pos, list_of_chars, input_len, newline_count)
         }
         '\"' => {
-            get_string_lit(pos, list_of_chars, input_len, newline_count)
+            get_dstring_lit(pos, list_of_chars, input_len, newline_count)
         }
         '&' => {
             token_.push(list_of_chars[pos]);
@@ -844,6 +844,7 @@ fn emit_token(
     };
 }
 
+
 fn get_keyword_or_id(
     pos : usize, 
     list_of_chars : &Vec<char>, 
@@ -880,27 +881,129 @@ fn get_keyword_or_id(
 }
 
 
-fn get_string_lit(
+fn get_sstring_lit(
     pos : usize, 
     list_of_chars : &Vec<char>, 
     input_len : usize, 
-    newline_count : usize
+    newline_count : usize,
 ) -> (Token, usize, usize){
-    let lookahead = pos + 1;
+    let mut token_ = String::from("\"");
+    let mut lookahead = pos + 1;
+    let temp_ = HashSet::from(['\\', 'n', 't', '\'']);
+    while lookahead < input_len { 
+        if list_of_chars[lookahead] == '\"' {
+            token_.push(list_of_chars[lookahead]);
+            lookahead += 1;
+            return (
+                Token{
+                    token_type: TType::StrLitDouble(token_.to_owned()), 
+                    position: pos, 
+                    length: lookahead, 
+                    line_no: newline_count
+                }
+                , lookahead, newline_count
+        
+            );
+        } else if list_of_chars[lookahead] != '\'' && list_of_chars[lookahead] != '\\'{
+            token_.push(list_of_chars[lookahead]);
+            lookahead += 1;
+        }
+        else if list_of_chars[lookahead] == '\\' {
+            let buffer = list_of_chars[lookahead];
+            println!("Got here");
+            lookahead += 1;
+            if !temp_.contains(&list_of_chars[lookahead]) {
+                return (
+                    Token{
+                        token_type: TType::UnsupportedToken(String::from("")), 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+            
+                );
+            } 
+            token_.push(buffer);
+            token_.push(list_of_chars[lookahead]);
+            lookahead += 1;
+        } else {
+            break;
+        }
+    }
     (
         Token{
-            token_type: TType::Id(String::from("\'\'")), 
+            token_type: TType::UnsupportedToken(token_.to_owned()), 
             position: pos, 
             length: lookahead, 
             line_no: newline_count
         }
         , lookahead, newline_count
-
     )
 }
 
 
-// fn get_number() ->
+fn get_dstring_lit(
+    pos : usize, 
+    list_of_chars : &Vec<char>, 
+    input_len : usize, 
+    newline_count : usize,
+) -> (Token, usize, usize){
+    let mut token_ = String::from("\"");
+    let mut lookahead = pos + 1;
+    let temp_ = HashSet::from(['\\', 'n', 't', '\"']);
+    while lookahead < input_len { 
+        if list_of_chars[lookahead] == '\"' {
+            token_.push(list_of_chars[lookahead]);
+            lookahead += 1;
+            return (
+                Token{
+                    token_type: TType::StrLitDouble(token_.to_owned()), 
+                    position: pos, 
+                    length: lookahead, 
+                    line_no: newline_count
+                }
+                , lookahead, newline_count
+        
+            );
+        } else if list_of_chars[lookahead] != '\"' && list_of_chars[lookahead] != '\\'{
+            token_.push(list_of_chars[lookahead]);
+            lookahead += 1;
+        }
+        else if list_of_chars[lookahead] == '\\' {
+            let buffer = list_of_chars[lookahead];
+            // println!("Got here{}", list_of_chars[lookahead+]);
+            lookahead += 1;
+            if !temp_.contains(&list_of_chars[lookahead]) {
+                return (
+                    Token{
+                        token_type: TType::UnsupportedToken(String::from("")), 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+            
+                );
+            } 
+            token_.push(buffer);
+            token_.push(list_of_chars[lookahead]);
+            lookahead += 1;
+        } else {
+            break;
+        }
+    }
+    (
+        Token{
+            token_type: TType::UnsupportedToken(token_.to_owned()), 
+            position: pos, 
+            length: lookahead, 
+            line_no: newline_count
+        }
+        , lookahead, newline_count
+    )
+}
+
 
 fn filter_whitespace(tokens : &Vec<Token>) -> Vec<Token> {
     let mut result : Vec<Token> = vec![];
