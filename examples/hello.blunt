@@ -4,8 +4,8 @@
 data Maybe[$1] = just($1 content) | none();
 
 fn map(x_fn : fn($1) -> $2) -> fn(list[$1]) -> list[$2]{
-    return |list[$1] x_list| -> list[$2] {
-        return [x_fn(x) | $1 x <- x_list];
+    return |x_list:list[$1]| -> list[$2] {
+        return [x_fn(x) | x:$1 <- x_list];
     }
 }
 
