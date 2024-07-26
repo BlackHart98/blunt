@@ -69,22 +69,23 @@ Below is the hierarchy of types in the avatre language from lowest to highest
 ```blunt
 @import(prelude)
 
-var result = a + aA + Ab - 2 && 3.0 + .04;
 
-data Maybe[$1] = just($1 content) | none();
+data Maybe[$1] = just(content:$1) | none();
 
-
-if n == 0 {
-    println("debug");
+fn map(x_fn : fn($1) -> $2) -> fn(list[$1]) -> list[$2]{
+    return |x_list:list[$1]| -> list[$2] {
+        return [x_fn(x) | x:$1 <- x_list];
+    }
 }
 
-fn foo(x: $1 <: int) -> fn($1) -> $2 {
-    return x |> y |> z;
+fn add1(x:int) -> int {
+    return x + 1;
 }
-
 
 fn main(args : list[str]) -> void {
 	print("hello world\n");
+    var result = map(add1)([1,2,3,4]);
+    print(result);
 }
 ```
 
