@@ -1,5 +1,5 @@
-# Avatre
-**Avatre** is a general-purpose language that has (meta-programming language features for defining languages, code analysis, and code generation). The language will have the following:
+# Blunt Language
+**Blunt** is a general-purpose language that has (meta-programming language features for defining languages, code analysis, and code generation). The language will have the following:
 - [Syntax Definition]()
 - [Algebraic Data Types]()
 - [Data Types]()
@@ -66,7 +66,7 @@ Below is the hierarchy of types in the avatre language from lowest to highest
 
 # Code snippet(tentative)
 
-```avatre
+```blunt
 @import(prelude)
 
 var result = a + aA + Ab - 2 && 3.0 + .04;
@@ -92,7 +92,7 @@ fn main(args : list[str]) -> void {
 # Reserved words
 The following are the list of reserved words in Avatre
 
-```avatre
+```blunt
 
 // keywords
 "fn", "if", "@import", "@extend", "var",
