@@ -963,19 +963,3 @@ fn filter_whitespace(tokens : &Vec<Token>) -> Vec<Token> {
     result
 }
 
-
-fn has_unsupported_char(lexemes : &Vec<Token>) -> bool{
-    let result:Token;
-    for x in lexemes{
-        match x{
-            Token{
-                token_type: TType::UnsupportedToken(_), 
-                position: _, 
-                length: _, 
-                line_no: _
-            } => return false,
-            _ => continue
-        }
-    }
-    return true
-}
