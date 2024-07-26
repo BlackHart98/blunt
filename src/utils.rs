@@ -1,3 +1,75 @@
+pub const RESERVED_WORDS: [&'static str; 42] 
+    = [
+        // keywords
+        "fn", "if", "@import", "@extend", "var",
+        "const", "return", "visit", "top_down", "bottom_up",
+        "innermost", "fail", "insert", "outermost", "top_down_break",
+        "for", "elif", "else","@external","@sypnosis","typedef",
+        "data", "in", "true", "false", "try", "catch",
+
+         // data types
+        "any","num","int","str","real",
+        "list","tuple","rel","lrel","map",
+        "void","set","node","loc", "itr"
+    ];
+
+
+    #[derive(Debug, PartialEq, Clone)]
+    pub enum TType{
+        Keyword(String),
+        Annotation(String),
+        Num(String),
+        CmtSingleLine(String),
+        CmtMultiLine(String),
+        UnsupportedToken(String),
+        Id(String),
+        EscId(String),
+        StrLitSingle(String),
+        StrLitDouble(String),
+        SpecialChar(String),
+        Pipe,
+        GenericSymbol,
+        Yield,
+        FwdArr,
+        Wildcard,
+        Plus,
+        Minus,
+        Incr,
+        Decr,
+        Eq,
+        Neq,
+        Gt,
+        Lt,
+        Gte,
+        Lte,
+        Bind,
+        Colon,
+        Match,
+        SemiColon,
+        NewLine,
+        HorizontalWhtSpc,
+        Comma,
+        Dot,
+        UpperBound,
+        OpenPar,
+        ClosePar,
+        OpenCurly,
+        CloseCurly,
+        OpenBracket,
+        CloseBracket,
+        And,
+        Or,
+        Not,
+        Combine,
+    }
+
+
+
+
+
+
+
+
 pub fn is_alphabet(c : char) -> bool{
     return match c {
         'a'..='z' => true,

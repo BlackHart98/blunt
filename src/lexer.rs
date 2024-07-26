@@ -1,74 +1,13 @@
 use std::collections::HashSet;
 use crate::utils::{
     is_identifier_substring,
-    finite_automaton
+    finite_automaton,
+    RESERVED_WORDS,
+    TType
 };
 
 #[allow(dead_code)]
 
-const RESERVED_WORDS: [&'static str; 41] 
-    = [
-        // keywords
-        "fn", "if", "@import", "@extend", "var",
-        "const", "return", "visit", "top_down", "bottom_up",
-        "innermost", "fail", "insert", "outermost", "top_down_break",
-        "for", "elif", "else","@external","@sypnosis","typedef",
-        "data", "in", "true", "false", "try", "catch",
-
-         // data types
-        "any","num","int","str","real",
-        "list","tuple","rel","lrel","map",
-        "void","set","node","loc", "itr"
-    ];
-
-
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum TType{
-    Keyword(String),
-    Num(String),
-    CmtSingleLine(String),
-    CmtMultiLine(String),
-    UnsupportedToken(String),
-    Id(String),
-    StrLitSingle(String),
-    StrLitDouble(String),
-    SpecialChar(String),
-    Pipe,
-    GenericSymbol,
-    Yield,
-    FwdArr,
-    Wildcard,
-    Plus,
-    Minus,
-    Incr,
-    Decr,
-    Eq,
-    Neq,
-    Gt,
-    Lt,
-    Gte,
-    Lte,
-    Bind,
-    Colon,
-    Match,
-    SemiColon,
-    NewLine,
-    HorizontalWhtSpc,
-    Comma,
-    Dot,
-    UpperBound,
-    OpenPar,
-    ClosePar,
-    OpenCurly,
-    CloseCurly,
-    OpenBracket,
-    CloseBracket,
-    And,
-    Or,
-    Not,
-    Combine,
-}
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Token{
@@ -79,27 +18,33 @@ pub struct Token{
 }
 
 
-pub fn scan_input<'a>(input : &str) -> Result<Vec<Token>, &'static str>{
+pub fn scan_input<'a>(input : &str) -> Result<Vec<Token>, Token>{
     let mut result = Vec::<Token>::new();
     let list_of_chars = input.chars().collect::<Vec<char>>();
     let input_len = list_of_chars.len();
     let mut counter: usize = 0;
     let mut token_lexeme:Token;
     let mut newline_count = 1;
-    // TODO: Implement scanner (stub)
+
     while counter < input_len {
         (token_lexeme, counter, newline_count) = emit_token(
             counter, 
             &list_of_chars, 
             input_len, 
             newline_count);
+        match token_lexeme {
+            Token{
+                token_type: TType::UnsupportedToken(_)
+                , position:_
+                , length:_
+                , line_no:_} => return Err(token_lexeme),
+            _ => ()
+        }
         result.push(token_lexeme);   
     }
-    if !has_unsupported_char(&result) {
-        return Err("unsupported token");  
-    }   else{
-        return Ok(filter_whitespace(&result));
-    }
+
+    return Ok(filter_whitespace(&result));
+    
 }
 
 
@@ -829,6 +774,7 @@ fn emit_token(
                 )
             }
         }
+        
         _ => {
             lookahead += 1;
             (
@@ -1019,6 +965,7 @@ fn filter_whitespace(tokens : &Vec<Token>) -> Vec<Token> {
 
 
 fn has_unsupported_char(lexemes : &Vec<Token>) -> bool{
+    let result:Token;
     for x in lexemes{
         match x{
             Token{
