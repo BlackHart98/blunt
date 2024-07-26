@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "avatre"
+name = "blunt"
 version = "0.1.0"

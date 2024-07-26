@@ -140,15 +140,27 @@ fn emit_token(
                     break;
                 }
             }
-            (
-                Token{
-                    token_type: TType::GenericSymbol, 
-                    position: pos, 
-                    length: lookahead, 
-                    line_no: newline_count
-                }
-                , lookahead, newline_count
-            )
+            if token_.len() > 1{
+                (
+                    Token{
+                        token_type: TType::GenericSymbol, 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+                )
+            } else {
+                (
+                    Token{
+                        token_type: TType::UnsupportedToken(token_.to_owned()), 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+                )
+            }
         }
         '@' => {
             token_.push(list_of_chars[pos]);
