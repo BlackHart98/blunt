@@ -69,20 +69,22 @@ Below is the hierarchy of types in the avatre language from lowest to highest
 ```avatre
 @import(prelude)
 
-var result += a + aA + Ab - 2 && 3.0 + .04;
+var result = a + aA + Ab - 2 && 3.0 + .04;
 
-data X = x("\"") | y();
+data Maybe[$1] = just($1 content) | none();
 
 
-if n == 0
+if n == 0 {
+    println("debug");
+}
 
-fn foo(x: $1 <: int): fn($1) -> $2 {
+fn foo(x: $1 <: int) -> fn($1) -> $2 {
     return x |> y |> z;
 }
 
 
-fn main(args : list[str]): void {
-	println();
+fn main(args : list[str]) -> void {
+	print("hello world\n");
 }
 ```
 
