@@ -14,7 +14,7 @@ fn add1(x:int) -> int {
 }
 
 fn main(args : list[str]) -> void {
-	print("hello world\n");
+	\\print("hello world\n");
     var result = map(add1)([1,2,3,4]);
     print(result);
 }

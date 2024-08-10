@@ -207,6 +207,41 @@ fn emit_token(
                 )
             }
         }
+        '\\' => {
+            token_.push(list_of_chars[pos]);
+            lookahead = pos + 1;
+            if list_of_chars[lookahead] == '\\' {
+                token_.push(list_of_chars[lookahead]);
+                lookahead += 1;
+                while lookahead < input_len {
+                    if list_of_chars[lookahead] == '\n'{
+                        break;
+                    } else {
+                        token_.push(list_of_chars[lookahead]);
+                        lookahead += 1;
+                    }
+                }
+                (
+                    Token{
+                        token_type: TType::CmtSingleLine(token_.to_owned()), 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+                )
+            } else {
+                (
+                    Token{
+                        token_type: TType::UnsupportedToken(token_.to_owned()), 
+                        position: pos, 
+                        length: lookahead, 
+                        line_no: newline_count
+                    }
+                    , lookahead, newline_count
+                )
+            }
+        }
         '+' => {
             token_.push(list_of_chars[pos]);
             lookahead = pos + 1;
@@ -242,7 +277,7 @@ fn emit_token(
                 lookahead += 1;
                 (
                     Token{
-                        token_type: TType::Incr, 
+                        token_type: TType::RMul, 
                         position: pos, 
                         length: lookahead, 
                         line_no: newline_count
@@ -252,7 +287,7 @@ fn emit_token(
             } else{
                 (
                     Token{
-                        token_type: TType::Plus, 
+                        token_type: TType::Mul, 
                         position: pos, 
                         length: lookahead, 
                         line_no: newline_count
@@ -269,7 +304,7 @@ fn emit_token(
                 lookahead += 1;
                 (
                     Token{
-                        token_type: TType::Incr, 
+                        token_type: TType::RDiv, 
                         position: pos, 
                         length: lookahead, 
                         line_no: newline_count
@@ -279,7 +314,7 @@ fn emit_token(
             } else{
                 (
                     Token{
-                        token_type: TType::Plus, 
+                        token_type: TType::Div, 
                         position: pos, 
                         length: lookahead, 
                         line_no: newline_count
@@ -962,6 +997,8 @@ fn get_dstring_lit(
     )
 }
 
+
+// fn get_singline_comment()
 
 fn filter_whitespace(tokens : &Vec<Token>) -> Vec<Token> {
     let mut result : Vec<Token> = vec![];
