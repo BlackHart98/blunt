@@ -13,6 +13,10 @@ fn add1(x:int) -> int {
     return x + 1;
 }
 
+fn add2(x:int) {
+    
+}
+
 fn main(args : list[str]) -> void {
 	\\print("hello world\n");
     var result = map(add1)([1,2,3,4]);

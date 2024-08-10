@@ -1,0 +1,4 @@
+@import (blunt/lexer)
+
+fn main() -> std::io::Result<()> {
+}
