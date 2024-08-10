@@ -1,4 +1,4 @@
 @import (blunt/lexer)
 
-fn main() -> std::io::Result<()> {
+fn main() -> void {
 }
