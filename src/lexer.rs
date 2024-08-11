@@ -1006,6 +1006,7 @@ fn filter_whitespace(tokens : &Vec<Token>) -> Vec<Token> {
         match x {
             Token{token_type:TType::NewLine, position:_, length:_, line_no:_} => continue,
             Token{token_type:TType::HorizontalWhtSpc, position:_, length:_, line_no:_} => continue,
+            Token{token_type:TType::CmtSingleLine(_), position:_, length:_, line_no:_} => continue,
             _ => result.push(x.to_owned())
         }
     }
