@@ -10,8 +10,8 @@ pub enum Blunt{
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Include{
-    Import{module:Vec<Token>},
-    // Extend{module: Vec<Token>}
+    Import{module:Vec<TType>},
+    Extend{module: Vec<TType>}
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -20,7 +20,7 @@ pub enum Declaration{
         func_id: TType, 
         params: Vec<Param>, 
         return_type: Type, 
-        func_body: Vec<Statement>
+        body: Vec<Statement>
     },
     ConstDecl{
         const_id: TType, 
@@ -87,6 +87,10 @@ pub enum Expr{
         params: Vec<Param>, 
         return_type: Option<Type>, 
         func_body: Vec<Statement>
+    },
+    FunctionCall{
+        func_id: TType,
+        args: Vec<Expr>
     },   
 }
 
@@ -138,6 +142,13 @@ pub enum Enumerator{
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Catch{
-    Catch{match_:Expr, body: Vec<Statement>}
+    Catch{pattern:Expr, body: Vec<Statement>}
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum Constructor{
+    Constructor{
+        constructor_name: TType,
+        params: Vec<Param>
+    },
+}
