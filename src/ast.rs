@@ -17,21 +17,21 @@ pub enum Include{
 #[derive(Debug, PartialEq, Clone)]
 pub enum Declaration{
     FunctionDef{
-        func_id: Token, 
+        func_id: TType, 
         params: Vec<Param>, 
         return_type: Type, 
         func_body: Vec<Statement>
     },
     ConstDecl{
-        const_id: Token, 
-        value: Token
+        const_id: TType, 
+        value: TType
     },
     TypeDef{
-        alias: Token, 
+        alias: TType, 
         typedef: Type
     },
     SumType{
-        data_id:Token, 
+        data_id:TType, 
         type_params: Vec<TypeParam>, 
         sum_types: Vec<Constructor>
     },
@@ -40,7 +40,7 @@ pub enum Declaration{
 #[derive(Debug, PartialEq, Clone)]
 pub enum Param{
     Param{
-        identifier: Token,
+        identifier: TType,
         type_ : Type
     }
 }
@@ -61,7 +61,7 @@ pub enum Type{
     Any,
     Node,
     Loc,
-    GenericSym{sym: TType, constraint: Type}
+    GenericSym{sym: TType, constraint_sym: TType, constraint: Type}
 }
 
 #[derive(Debug, PartialEq, Clone)]
