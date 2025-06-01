@@ -207,8 +207,8 @@ fn _mapToKeyword(token: *const []const u8) ?Keyword {
 const LexerError = error{LexerError, OutOfMemory};
 
 
-pub fn scanInput(allocator: *std.mem.Allocator, input: []const u8) LexerError![]Token {
-    var result = std.ArrayList(Token).init(allocator.*);
+pub fn scanInput(allocator: std.mem.Allocator, input: []const u8) LexerError![]Token {
+    var result = std.ArrayList(Token).init(allocator);
     errdefer result.deinit();
     
     var counter: usize = 0;
@@ -228,10 +228,10 @@ pub fn scanInput(allocator: *std.mem.Allocator, input: []const u8) LexerError![]
 }
 
 
-inline fn _emitToken(allocator: *std.mem.Allocator, pos: usize, list_of_chars: []const u8, input_len: usize, newline_count_: usize) !struct{?Token, usize, usize} {
+inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []const u8, input_len: usize, newline_count_: usize) !struct{?Token, usize, usize} {
         var lookahead: usize = pos;
         
-        var token_ = std.ArrayList(u8).init(allocator.*);
+        var token_ = std.ArrayList(u8).init(allocator);
         defer token_.deinit();
         var newline_count: usize = newline_count_;
         switch (list_of_chars[pos]) {
@@ -1113,7 +1113,7 @@ inline fn _emitToken(allocator: *std.mem.Allocator, pos: usize, list_of_chars: [
 
 
 
-inline fn _getKeywordOrId(allocator: *std.mem.Allocator, pos : usize, list_of_chars : []const u8, input_len: usize, newline_count: usize) !struct{?Token, usize, usize} {
+inline fn _getKeywordOrId(allocator: std.mem.Allocator, pos : usize, list_of_chars : []const u8, input_len: usize, newline_count: usize) !struct{?Token, usize, usize} {
     const temp_ = try _finiteAutomaton(allocator, pos, list_of_chars, input_len);
     const token_ = temp_.@"0"; const lookahead = temp_.@"1";
     // std.debug.print("hello world ____ {s}\n", .{token_});
@@ -1147,8 +1147,8 @@ inline fn _getKeywordOrId(allocator: *std.mem.Allocator, pos : usize, list_of_ch
 }
 
 
-inline fn _finiteAutomaton(allocator: *std.mem.Allocator, pos: usize, list_of_chars: []const u8, input_len: usize) !struct { []const u8, usize } {
-    var token_ = std.ArrayList(u8).init(allocator.*);
+inline fn _finiteAutomaton(allocator: std.mem.Allocator, pos: usize, list_of_chars: []const u8, input_len: usize) !struct { []const u8, usize } {
+    var token_ = std.ArrayList(u8).init(allocator);
     defer token_.deinit();
     
     var lookahead = pos + 1;
@@ -1164,8 +1164,8 @@ inline fn _finiteAutomaton(allocator: *std.mem.Allocator, pos: usize, list_of_ch
     return .{ try token_.toOwnedSlice(), lookahead };
 }
 
-fn getDstringLit(allocator: *std.mem.Allocator, pos : usize, list_of_chars : []const u8, input_len: usize, newline_count: usize) !struct{?Token, usize, usize}{
-    var token_ = std.ArrayList(u8).init(allocator.*);
+fn getDstringLit(allocator: std.mem.Allocator, pos : usize, list_of_chars : []const u8, input_len: usize, newline_count: usize) !struct{?Token, usize, usize}{
+    var token_ = std.ArrayList(u8).init(allocator);
     defer token_.deinit();
     try token_.append('\"');
     var lookahead = pos + 1;

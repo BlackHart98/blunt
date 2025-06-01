@@ -41,15 +41,15 @@ pub fn main() !void {
         \\  const foo : int = 1;
         \\}
     ;
-    const tokens = try lexer.scanInput(&allocator, code_snippet_1);
+    const tokens = try lexer.scanInput(allocator, code_snippet_1);
     defer allocator.free(tokens);
     // std.debug.print("You're broke, Mr. {?}\n", .{foobar[1]});
     // for (tokens) |x|{
     //     std.debug.print("You're broke, Mr. {?}\n", .{x});
     // }
 
-    const foofoo = try parser.parseCompilationUnit(&allocator, tokens);
-    defer parser.deinitCompilationUnit(&allocator, foofoo.node);
+    const foofoo = try parser.parseCompilationUnit(allocator, tokens);
+    defer parser.deinitCompilationUnit(allocator, foofoo.node);
     // defer allocator.free(foofoo.node);
     std.debug.print("astNode: {any}\n", .{foofoo.node.statements});
     for (foofoo.node.statements.?) |x| {

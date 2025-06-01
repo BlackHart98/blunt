@@ -14,10 +14,10 @@ pub fn ParseResult(comptime T: type) type {
 }
 
 // Still trying to wrap my head around Zig
-pub fn parseCompilationUnit(allocator: *std.mem.Allocator, tokens: ?[]const lexer.Token) ParseResult(ast.CompilationUnit) {
-    var importList = std.ArrayList(*const ast.Import).init(allocator.*);
+pub fn parseCompilationUnit(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token) ParseResult(ast.CompilationUnit) {
+    var importList = std.ArrayList(*const ast.Import).init(allocator);
     errdefer importList.deinit();
-    var statementList = std.ArrayList(*const ast.Statement).init(allocator.*);
+    var statementList = std.ArrayList(*const ast.Statement).init(allocator);
     errdefer statementList.deinit();
     const N = tokens.?.len;
     var i: usize = 0;
@@ -114,7 +114,7 @@ pub inline fn parseImport(tokens: ?[]const lexer.Token, index: usize) ParseResul
     return ParseError.ParseError;
 }
 
-pub fn parseStatement(allocator: *std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Statement) {
+pub fn parseStatement(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Statement) {
     if (_expect(lexer.Keyword, tokens.?[index], .fn_)) {
         return try parseFunctionDef(allocator, tokens, index);
     } else if (_expect(lexer.Keyword, tokens.?[index], .const_) or _expect(lexer.Keyword, tokens.?[index], .var_)) {
@@ -151,12 +151,12 @@ pub inline fn parseIdentifier(tokens: ?[]const lexer.Token, index: usize) ParseR
     }
 }
 
-pub fn parseFunctionDef(allocator: *std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Statement) {
+pub fn parseFunctionDef(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Statement) {
     var i: usize = index + 1;
     const N = tokens.?.len;
-    var parameterList = std.ArrayList(*const ast.Parameter).init(allocator.*);
+    var parameterList = std.ArrayList(*const ast.Parameter).init(allocator);
     errdefer parameterList.deinit();
-    var statementList = std.ArrayList(*const ast.Statement).init(allocator.*);
+    var statementList = std.ArrayList(*const ast.Statement).init(allocator);
     errdefer statementList.deinit();
     const identifier = try parseIdentifier(tokens, i);
     i = identifier.end;
@@ -232,7 +232,7 @@ pub fn parseFunctionDef(allocator: *std.mem.Allocator, tokens: ?[]const lexer.To
     }
 }
 
-pub inline fn parseDeclarationStmt(declaration_desc: ?lexer.Keyword, allocator: *std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Statement) {
+pub inline fn parseDeclarationStmt(declaration_desc: ?lexer.Keyword, allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Statement) {
     var i: usize = index;
     i += 1;
     if (_expect(TokenCategory, tokens.?[i], .id)) {
@@ -294,17 +294,24 @@ pub inline fn parseDeclarationStmt(declaration_desc: ?lexer.Keyword, allocator: 
 }
 
 
-pub inline fn parseParameter(_: *std.mem.Allocator, _: ?[]const lexer.Token, _: usize) ParseResult(ast.Parameter) {
+pub inline fn parseParameter(_: std.mem.Allocator, _: ?[]const lexer.Token, _: usize) ParseResult(ast.Parameter) {
     return ParseError.ParseError;
 }
 
 
-pub inline fn parseExpr(_: *std.mem.Allocator, _: ?[]const lexer.Token, _: usize) ParseResult(ast.Expr){
+// prefix notation
+pub inline fn parseExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
+    const i: usize = index;
+    const N = tokens.?.len;
+    const expr_stack = _utils.Stack(ast.Expr, 500).init(allocator);
+    // errdefer expr_node.deinit();
+    std.debug.print("info: trying to parse expression!{any}_________{?} current stack size {?}\n", .{tokens.?[i], N, expr_stack.top});
+    // while (i < )
     return ParseError.ParseError;
 }
 
 
-pub fn parseType(allocator: *std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Type) {
+pub fn parseType(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Type) {
     var i: usize = index;
     const N: usize = tokens.?.len;
     if (_expect(lexer.Keyword, tokens.?[i], .void_)) {
@@ -407,7 +414,13 @@ fn _expect(comptime T: type, token: lexer.Token, token_target: ?T) bool {
     return false;
 }
 
-pub fn deinitCompilationUnit(allocator: *std.mem.Allocator, unit: ast.CompilationUnit) void {
+
+fn precedence() u8{
+    return 0;
+}
+
+
+pub fn deinitCompilationUnit(allocator: std.mem.Allocator, unit: ast.CompilationUnit) void {
     if (unit.import_decls) |imports| {
         for (imports) |import_node| {
             allocator.destroy(import_node);
