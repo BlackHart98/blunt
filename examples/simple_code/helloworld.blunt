@@ -1,4 +1,4 @@
-@import(prelude)
+@import("prelude") as prelude
 
 
 data Maybe[$1] = just(content:$1) | none();
@@ -18,9 +18,8 @@ fn add2(x:int) {
 }
 
 fn main(args : list[str]) -> void {
-	\\print("hello world\n");
+	// print("hello world\n");
     var result = map(add1)([1,2,3,4]);
     print(result);
+    result |> print;
 }
-
-

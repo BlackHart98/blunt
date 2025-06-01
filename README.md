@@ -67,7 +67,7 @@ Below is the hierarchy of types in the avatre language from lowest to highest
 # Code snippet(tentative)
 
 ```blunt
-@import(prelude)
+@import("prelude") as prelude
 
 
 data Maybe[$1] = just(content:$1) | none();
@@ -82,8 +82,12 @@ fn add1(x:int) -> int {
     return x + 1;
 }
 
+fn add2(x:int) {
+    
+}
+
 fn main(args : list[str]) -> void {
-	print("hello world\n");
+	// print("hello world\n");
     var result = map(add1)([1,2,3,4]);
     print(result);
 }
@@ -100,7 +104,7 @@ The following are the list of reserved words in Avatre
 "const", "return", "visit", "top_down", "bottom_up",
 "innermost", "fail", "insert", "outermost", "top_down_break",
 "for", "elif", "else","@external","@sypnosis","typedef",
-"data", "in", "true", "false", "try", "catch",
+"data", "in", "true", "false", "try", "catch", "as"
 
 // data types
 "any","num","int","str","real",

@@ -1,4 +1,0 @@
-@import (blunt/lexer)
-
-fn main() -> void {
-}

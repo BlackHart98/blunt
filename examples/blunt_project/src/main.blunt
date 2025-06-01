@@ -1,0 +1,6 @@
+@import("prelude") as std
+
+
+fn main(args: str = "testarg") -> void {
+    std.println("hello world .{args}");
+}
