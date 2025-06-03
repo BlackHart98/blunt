@@ -416,11 +416,11 @@ pub fn parseFactor(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, i
         node.* = expr_result.node;
         i = expr_result.end;
         if (i >= N) return ParseError.ParseError;
-        io.print("my mind is fatigued, .......... almost closed parenthesis {?}\n", .{expr_result});
-        // io.print("my mind is fatigued, .......... almost closed parenthesis {?}\n", .{tokens.?[i]});
-        if (_expect(lexer.BluntSymbol, tokens.?[i], .close_par_)){
+        // io.print("my mind is fatigued, .......... almost closed parenthesis {?}\n", .{expr_result});
+        io.print("my mind is fatigued, .......... almost closed parenthesis {?}\n", .{tokens.?[i - 1]});
+        if (_expect(lexer.BluntSymbol, tokens.?[i - 1], .close_par_)){
             io.print("my mind is fatigued, .......... closed parenthesis\n", .{});
-            return .{.node = node.*, .end = i + 2}; 
+            return .{.node = node.*, .end = i + 1}; 
         } else {
             return ParseError.ParseError;
         }
