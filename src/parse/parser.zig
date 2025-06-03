@@ -303,27 +303,27 @@ pub inline fn parseParameter(_: std.mem.Allocator, _: ?[]const lexer.Token, _: u
 
 
 pub fn parseExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
-    io.print("my mind is fatigued, ..........\n", .{});
+    io.print("parse expression, token_no: {}, cunrent_token: \n\t{}\n", .{index, tokens.?[index]});
     return try parseAddOrSubExpr(allocator, tokens, index);
 }
 
 
 // recursive parser arranged according to precendence
 pub fn parseAddOrSubExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
-    io.print("my mind is fatigued, .......... parseAddOrSubExpr\n", .{});
+    io.print("parse add or sub expression, token_no: {}, cunrent_token: \n\t{}\n", .{index, tokens.?[index]});
     var i = index;
     const N = tokens.?.len;
-    // var factor_result = try parseMulOrDivExpr(allocator, tokens, i);
     var factor_result = try parseMulOrDivExpr(allocator, tokens, i);
-    io.print("my mind is end parsing mul or div, .......... parseAddOrSubExpr {?} ============ \n\t{?}\n", .{factor_result.node, tokens.?[factor_result.end]});
+    io.print("left expression: \n\t{?}\n", .{factor_result.node});
     const expr_node = try allocator.create(ast.Expr);
     errdefer allocator.destroy(expr_node);
     expr_node.* = factor_result.node;
     i = factor_result.end;
     while (i < N){
-        io.print("trying to pass the rest of the the addition expression {?}\n", .{tokens.?[i]});
+        if (i >= N) return ParseError.ParseError;
         if (_expect(lexer.BluntSymbol, tokens.?[i], .minus_) or _expect(lexer.BluntSymbol, tokens.?[i], .plus_)){
-            io.print("found plus operator\n", .{});
+            io.print("trying to pass the rest of the the add or sub expression {?}\n", .{tokens.?[i]});
+            // io.print("found plus operator\n", .{});
             const op = tokens.?[i];
             i += 1;
             if (i >= N) return ParseError.ParseError;
@@ -335,9 +335,11 @@ pub fn parseAddOrSubExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.To
             i = factor_result.end;
             if (i >= N) return ParseError.ParseError;
 
-            io.print("creating node...\n", .{});
-            expr_node.* = try makeBinaryNode(op, right_node, expr_node);
+            // io.print("creating node...\n", .{});
+            const new_node = try makeBinaryNode(allocator, op, right_node, expr_node);
+            expr_node.* = new_node;
         } else {
+            io.print("exiting add or sub expression {?}\n", .{tokens.?[i]});
             return .{.node = expr_node.*, .end = i}; 
         }
     }
@@ -347,7 +349,7 @@ pub fn parseAddOrSubExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.To
 
 
 pub fn parseMulOrDivExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
-    io.print("my mind is fatigued, .......... parseMulOrDivExpr\n", .{});
+    // io.print("my mind is fatigued, .......... parseMulOrDivExpr\n", .{});
     var i = index;
     const N = tokens.?.len;
     var factor_result = try parseFactor(allocator, tokens, i);
@@ -368,7 +370,8 @@ pub fn parseMulOrDivExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.To
             i = factor_result.end;
             if (i >= N) return ParseError.ParseError;
 
-            expr_node.* = try makeBinaryNode(op, right_node, expr_node);
+            const new_node = try makeBinaryNode(allocator, op, right_node, expr_node);
+            expr_node.* = new_node;
         } else {
             return .{.node = expr_node.*, .end = i}; 
         }
@@ -378,7 +381,7 @@ pub fn parseMulOrDivExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.To
 
 
 pub fn parseDotExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
-    io.print("my mind is fatigued, .......... parseDotExpr\n", .{});
+    // io.print("my mind is fatigued, .......... parseDotExpr\n", .{});
     var i = index;
     const N = tokens.?.len;
     var factor_result = try parseFactor(allocator, tokens, i);
@@ -399,7 +402,8 @@ pub fn parseDotExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, 
             i = factor_result.end;
             if (i >= N) return ParseError.ParseError;
 
-            expr_node.* = try makeBinaryNode(op, right_node, expr_node);
+            const new_node = try makeBinaryNode(allocator, op, right_node, expr_node);
+            expr_node.* = new_node;
         } else {
             return .{.node = expr_node.*, .end = i}; 
         }
@@ -408,22 +412,22 @@ pub fn parseDotExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, 
 }
 
 pub fn parseFactor(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
-    io.print("my mind is fatigued, .......... parseFactor========= {?}\n", .{tokens.?[index]});
+    // io.print("my mind is fatigued, .......... parseFactor========= {?}\n", .{tokens.?[index]});
     var i = index;
     const N = tokens.?.len;
     if (_expect(lexer.BluntSymbol, tokens.?[i], .open_par_)){
         i += 1;
         if (i >= N) return ParseError.ParseError;
         const expr_result = try parseExpr(allocator, tokens, i);
-        io.print("end of the expression {?}\n", .{expr_result});
+        // io.print("end of the expression {?}\n", .{expr_result});
         i = expr_result.end;
         if (i >= N) return ParseError.ParseError;
         const node = try allocator.create(ast.Expr);
         errdefer allocator.destroy(node);
         node.* = expr_result.node;
-        io.print("my mind is fatigued, .......... almost closed parenthesis???????? {?}\n", .{tokens.?[i]});
+        // io.print("my mind is fatigued, .......... almost closed parenthesis???????? {?}\n", .{tokens.?[i]});
         if (_expect(lexer.BluntSymbol, tokens.?[i], .close_par_)){
-            io.print("my mind is fatigued, .......... closed parenthesis\n", .{});
+            // io.print("my mind is fatigued, .......... closed parenthesis\n", .{});
             return .{.node = node.*, .end = i + 1}; 
         } else {
             return ParseError.ParseError;
@@ -431,7 +435,7 @@ pub fn parseFactor(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, i
         return ParseError.ParseError;
     } else if (_expect(TokenCategory, tokens.?[i], .id)){
         const identifier = try parseIdentifier(tokens, i);
-        io.print("my mind is fatigued, .......... parseIdentifier {?}\n", .{tokens.?[identifier.end]});
+        // io.print("my mind is fatigued, .......... parseIdentifier {?}\n", .{tokens.?[identifier.end]});
         return .{.node = .{ 
             .identifier = ast.Identifier{
                 .identifier = identifier.node.identifier
@@ -446,15 +450,21 @@ pub fn parseFactor(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, i
 } 
 
 
-pub fn makeBinaryNode(operator: lexer.Token, right_node: *ast.Expr, node: *ast.Expr) !ast.Expr{
+pub fn makeBinaryNode(allocator: std.mem.Allocator, operator: lexer.Token, right_node: *ast.Expr, node: *ast.Expr) !ast.Expr{
     const loc = try getLineNumberExpr(right_node.*);
+    const left = try allocator.create(ast.Expr);
+    errdefer allocator.destroy(left);
+    const right = try allocator.create(ast.Expr);
+    errdefer allocator.destroy(right);
+    left.* = node.*;
+    right.* = right_node.*;
     switch (operator.blunt_symbol.token_type){
         .dot_ =>{
             return ast.Expr{
                 .binary_op = ast.BinaryOp{
                 .op = .Dot,
-                .left = node,
-                .right = right_node,
+                .left = left,
+                .right = right,
                 .position = loc.position,
                 .length = loc.length,
                 .line_no = loc.line_no
@@ -464,8 +474,8 @@ pub fn makeBinaryNode(operator: lexer.Token, right_node: *ast.Expr, node: *ast.E
             return ast.Expr{
                 .binary_op = ast.BinaryOp{
                 .op = .Sub,
-                .left = node,
-                .right = right_node,
+                .left = left,
+                .right = right,
                 .position = loc.position,
                 .length = loc.length,
                 .line_no = loc.line_no
@@ -475,8 +485,8 @@ pub fn makeBinaryNode(operator: lexer.Token, right_node: *ast.Expr, node: *ast.E
             return ast.Expr{
                 .binary_op = ast.BinaryOp{
                 .op = .Add,
-                .left = node,
-                .right = right_node,
+                .left = left,
+                .right = right,
                 .position = loc.position,
                 .length = loc.length,
                 .line_no = loc.line_no
@@ -486,8 +496,8 @@ pub fn makeBinaryNode(operator: lexer.Token, right_node: *ast.Expr, node: *ast.E
             return ast.Expr{
                 .binary_op = ast.BinaryOp{
                     .op = .Div,
-                    .left = node,
-                    .right = right_node,
+                    .left = left,
+                    .right = right,
                     .position = loc.position,
                     .length = loc.length,
                     .line_no = loc.line_no
@@ -497,8 +507,8 @@ pub fn makeBinaryNode(operator: lexer.Token, right_node: *ast.Expr, node: *ast.E
             return ast.Expr{
                 .binary_op = ast.BinaryOp{
                 .op = .Mul,
-                .left = node,
-                .right = right_node,
+                .left = left,
+                .right = right,
                 .position = loc.position,
                 .length = loc.length,
                 .line_no = loc.line_no
@@ -508,8 +518,8 @@ pub fn makeBinaryNode(operator: lexer.Token, right_node: *ast.Expr, node: *ast.E
             return ast.Expr{
                 .binary_op = ast.BinaryOp{
                 .op = .Eq,
-                .left = node,
-                .right = right_node,
+                .left = left,
+                .right = right,
                 .position = loc.position,
                 .length = loc.length,
                 .line_no = loc.line_no
@@ -519,8 +529,8 @@ pub fn makeBinaryNode(operator: lexer.Token, right_node: *ast.Expr, node: *ast.E
             return ast.Expr{
                 .binary_op = ast.BinaryOp{
                 .op = .Neq,
-                .left = node,
-                .right = right_node,
+                .left = left,
+                .right = right,
                 .position = loc.position,
                 .length = loc.length,
                 .line_no = loc.line_no
@@ -530,8 +540,8 @@ pub fn makeBinaryNode(operator: lexer.Token, right_node: *ast.Expr, node: *ast.E
             return ast.Expr{
                 .binary_op = ast.BinaryOp{
                 .op = .Gt,
-                .left = node,
-                .right = right_node,
+                .left = left,
+                .right = right,
                 .position = loc.position,
                 .length = loc.length,
                 .line_no = loc.line_no
@@ -541,8 +551,8 @@ pub fn makeBinaryNode(operator: lexer.Token, right_node: *ast.Expr, node: *ast.E
             return ast.Expr{
                 .binary_op = ast.BinaryOp{
                 .op = .Lt,
-                .left = node,
-                .right = right_node,
+                .left = left,
+                .right = right,
                 .position = loc.position,
                 .length = loc.length,
                 .line_no = loc.line_no
@@ -552,8 +562,8 @@ pub fn makeBinaryNode(operator: lexer.Token, right_node: *ast.Expr, node: *ast.E
             return ast.Expr{
                 .binary_op = ast.BinaryOp{
                 .op = .Gte,
-                .left = node,
-                .right = right_node,
+                .left = left,
+                .right = right,
                 .position = loc.position,
                 .length = loc.length,
                 .line_no = loc.line_no
@@ -563,8 +573,8 @@ pub fn makeBinaryNode(operator: lexer.Token, right_node: *ast.Expr, node: *ast.E
             return ast.Expr{
                 .binary_op = ast.BinaryOp{
                 .op = .Lte,
-                .left = node,
-                .right = right_node,
+                .left = left,
+                .right = right,
                 .position = loc.position,
                 .length = loc.length,
                 .line_no = loc.line_no
@@ -574,8 +584,8 @@ pub fn makeBinaryNode(operator: lexer.Token, right_node: *ast.Expr, node: *ast.E
             return ast.Expr{
                 .binary_op = ast.BinaryOp{
                 .op = .Match,
-                .left = node,
-                .right = right_node,
+                .left = left,
+                .right = right,
                 .position = loc.position,
                 .length = loc.length,
                 .line_no = loc.line_no
@@ -585,8 +595,8 @@ pub fn makeBinaryNode(operator: lexer.Token, right_node: *ast.Expr, node: *ast.E
             return ast.Expr{
                 .binary_op = ast.BinaryOp{
                 .op = .And,
-                .left = node,
-                .right = right_node,
+                .left = left,
+                .right = right,
                 .position = loc.position,
                 .length = loc.length,
                 .line_no = loc.line_no
@@ -596,8 +606,8 @@ pub fn makeBinaryNode(operator: lexer.Token, right_node: *ast.Expr, node: *ast.E
             return ast.Expr{
                 .binary_op = ast.BinaryOp{
                 .op = .Or,
-                .left = node,
-                .right = right_node,
+                .left = left,
+                .right = right,
                 .position = loc.position,
                 .length = loc.length,
                 .line_no = loc.line_no
@@ -607,8 +617,8 @@ pub fn makeBinaryNode(operator: lexer.Token, right_node: *ast.Expr, node: *ast.E
             return ast.Expr{
                 .binary_op = ast.BinaryOp{
                 .op = .Pipe,
-                .left = node,
-                .right = right_node,
+                .left = left,
+                .right = right,
                 .position = loc.position,
                 .length = loc.length,
                 .line_no = loc.line_no
@@ -666,6 +676,24 @@ pub inline fn getLineNumberExpr(node: ast.Expr) !struct{position: usize, length:
                 .position = node.binary_op.position,
                 .length = node.binary_op.length,
                 .line_no = node.binary_op.line_no,};
+        },
+        .unary_op =>{
+            return .{
+                .position = node.unary_op.position,
+                .length = node.unary_op.length,
+                .line_no = node.unary_op.line_no,};
+        },
+        .function_call =>{
+            return .{
+                .position = node.function_call.position,
+                .length = node.function_call.length,
+                .line_no = node.function_call.line_no,};
+        },
+        .generator =>{
+            return .{
+                .position = node.generator.position,
+                .length = node.generator.length,
+                .line_no = node.generator.line_no,};
         },
         else => {
             return error.InternalError;

@@ -195,11 +195,11 @@ pub const ForStmt = struct {
 /// Available expression types
 pub const Expr = union(enum) {
     binary_op: BinaryOp,
-    unary_op: *UnaryOp,
+    unary_op: UnaryOp,
     bracket: *Bracket,
     identifier: Identifier,
-    function_call: *FunctionCall,
-    generator: *Generator,
+    function_call: FunctionCall,
+    generator: Generator,
 };
 
 pub const BinaryOp = struct {
