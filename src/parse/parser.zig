@@ -3,8 +3,9 @@ const std = @import("std");
 const lexer = @import("lexer.zig");
 const ast = @import("ast.zig");
 const _utils = @import("../utils.zig");
+const io = std.debug;
 
-const ParseError = error{ ParseError, OutOfMemory, UnsupportedToken };
+const ParseError = error{ ParseError, OutOfMemory, UnsupportedToken, InternalError };
 const TokenCategory = enum { str, id, num, cmt };
 pub fn ParseResult(comptime T: type) type {
     return ParseError!struct {
@@ -138,7 +139,7 @@ pub inline fn parseAlias(tokens: ?[]const lexer.Token, index: usize) ParseResult
     return ParseError.ParseError;
 }
 
-pub inline fn parseIdentifier(tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Identifier) {
+pub fn parseIdentifier(tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Identifier) {
     if (_expect(TokenCategory, tokens.?[index], .id)) {
         return .{ .node = ast.Identifier{
             .identifier = &tokens.?[index],
@@ -233,8 +234,7 @@ pub fn parseFunctionDef(allocator: std.mem.Allocator, tokens: ?[]const lexer.Tok
 }
 
 pub inline fn parseDeclarationStmt(declaration_desc: ?lexer.Keyword, allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Statement) {
-    var i: usize = index;
-    i += 1;
+    var i: usize = index + 1;
     if (_expect(TokenCategory, tokens.?[i], .id)) {
         const variable_result = try parseIdentifier(tokens, i);
         i += 1;
@@ -252,7 +252,7 @@ pub inline fn parseDeclarationStmt(declaration_desc: ?lexer.Keyword, allocator: 
             i += 1;
             
             _ = try parseExpr(allocator, tokens, i);
-
+            io.print("foo bar, finally ... so I can rest {?}\n", .{try parseExpr(allocator, tokens, i)});
             // declaration_statement.* = ast.Statement{
             //     .declaration_stmt = .{
             //         .declaration_desc = declaration_desc,
@@ -299,15 +299,366 @@ pub inline fn parseParameter(_: std.mem.Allocator, _: ?[]const lexer.Token, _: u
 }
 
 
-// prefix notation
-pub inline fn parseExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
-    const i: usize = index;
+pub fn parseExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
+    io.print("my mind is fatigued, ..........\n", .{});
+    return try parseAddOrSubExpr(allocator, tokens, index);
+}
+
+
+// recursive parser arranged according to precendence
+pub fn parseAddOrSubExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
+    io.print("my mind is fatigued, .......... parseAddOrSubExpr\n", .{});
+    var i = index;
     const N = tokens.?.len;
-    const expr_stack = _utils.Stack(ast.Expr, 500).init(allocator);
-    // errdefer expr_node.deinit();
-    std.debug.print("info: trying to parse expression!{any}_________{?} current stack size {?}\n", .{tokens.?[i], N, expr_stack.top});
-    // while (i < )
+    var factor_result = try parseMulOrDivExpr(allocator, tokens, index);
+    io.print("my mind is end parsing mul or div, .......... parseAddOrSubExpr {?} ============ \n\t{?}\n", .{factor_result.node, tokens.?[factor_result.end]});
+    const expr_node = try allocator.create(ast.Expr);
+    errdefer allocator.destroy(expr_node);
+    expr_node.* = factor_result.node;
+    i = factor_result.end;
+    while (i < N) : (i += 1){
+        io.print("trying to pass the rest of the the addition expression {?}\n", .{tokens.?[i]});
+        if (_expect(lexer.BluntSymbol, tokens.?[i], .minus_) or _expect(lexer.BluntSymbol, tokens.?[i], .plus_)){
+            io.print("found plus operator\n", .{});
+            const op = tokens.?[i];
+            i += 1;
+            if (i >= N) return ParseError.ParseError;
+
+            const right_node = try allocator.create(ast.Expr);
+            errdefer allocator.destroy(right_node);
+            factor_result = try parseMulOrDivExpr(allocator, tokens, i);
+            right_node.* = factor_result.node;
+            i = factor_result.end;
+            if (i >= N) return ParseError.ParseError;
+
+            io.print("creating node...", .{});
+            expr_node.* = try makeBinaryNode(allocator, op, right_node.*, expr_node.*);
+        } else {
+            return .{.node = expr_node.*, .end = i}; 
+        }
+    }
+    return .{.node = expr_node.*, .end = i}; 
+}
+
+
+
+pub fn parseMulOrDivExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
+    io.print("my mind is fatigued, .......... parseMulOrDivExpr\n", .{});
+    var i = index;
+    const N = tokens.?.len;
+    var factor_result = try parseDotExpr(allocator, tokens, index);
+    const expr_node = try allocator.create(ast.Expr);
+    errdefer allocator.destroy(expr_node);
+    expr_node.* = factor_result.node;
+    i = factor_result.end;
+    while (i < N) : (i += 1){
+        if (_expect(lexer.BluntSymbol, tokens.?[i], .div_) or _expect(lexer.BluntSymbol, tokens.?[i], .mul_)){
+            const op = tokens.?[i];
+            i += 1;
+            if (i >= N) return ParseError.ParseError;
+
+            const right_node = try allocator.create(ast.Expr);
+            errdefer allocator.destroy(right_node);
+            factor_result = try parseDotExpr(allocator, tokens, i);
+            right_node.* = factor_result.node;
+            i = factor_result.end;
+            if (i >= N) return ParseError.ParseError;
+
+            expr_node.* = try makeBinaryNode(allocator, op, right_node.*, expr_node.*);
+        } else {
+            return .{.node = expr_node.*, .end = i}; 
+        }
+    }
+    return .{.node = expr_node.*, .end = i}; 
+}
+
+
+pub fn parseDotExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
+    io.print("my mind is fatigued, .......... parseDotExpr\n", .{});
+    var i = index;
+    const N = tokens.?.len;
+    var factor_result = try parseFactor(allocator, tokens, i);
+    const expr_node = try allocator.create(ast.Expr);
+    errdefer allocator.destroy(expr_node);
+    expr_node.* = factor_result.node;
+    i = factor_result.end;
+    while (i < N) : (i += 1){
+        if (_expect(lexer.BluntSymbol, tokens.?[i], .dot_)){
+            const op = tokens.?[i];
+            i += 1;
+            if (i >= N) return ParseError.ParseError;
+
+            const right_node = try allocator.create(ast.Expr);
+            errdefer allocator.destroy(right_node);
+            factor_result = try parseFactor(allocator, tokens, i);
+            right_node.* = factor_result.node;
+            i = factor_result.end;
+            if (i >= N) return ParseError.ParseError;
+
+            expr_node.* = try makeBinaryNode(allocator, op, right_node.*, expr_node.*);
+        } else {
+            return .{.node = expr_node.*, .end = i}; 
+        }
+    }
+    return .{.node = expr_node.*, .end = i}; 
+}
+
+pub fn parseFactor(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
+    io.print("my mind is fatigued, .......... parseFactor>>>>>>>>> {?}\n", .{tokens.?[index]});
+    var i = index;
+    const N = tokens.?.len;
+    if (_expect(lexer.BluntSymbol, tokens.?[i], .open_par_)){
+        i += 1;
+        if (i >= N) return ParseError.ParseError;
+        const expr_result = try parseExpr(allocator, tokens, i);
+        const node = try allocator.create(ast.Expr);
+        errdefer allocator.destroy(node);
+        node.* = expr_result.node;
+        i = expr_result.end;
+        if (i >= N) return ParseError.ParseError;
+        io.print("my mind is fatigued, .......... almost closed parenthesis {?}\n", .{expr_result});
+        // io.print("my mind is fatigued, .......... almost closed parenthesis {?}\n", .{tokens.?[i]});
+        if (_expect(lexer.BluntSymbol, tokens.?[i], .close_par_)){
+            io.print("my mind is fatigued, .......... closed parenthesis\n", .{});
+            return .{.node = node.*, .end = i + 2}; 
+        } else {
+            return ParseError.ParseError;
+        }
+    } else if (_expect(TokenCategory, tokens.?[i], .id)){
+        const identifier = try parseIdentifier(tokens, i);
+        io.print("my mind is fatigued, .......... parseIdentifier {?}\n", .{tokens.?[identifier.end]});
+        return .{.node = .{ 
+            .identifier = ast.Identifier{
+                .identifier = identifier.node.identifier
+                , .position = identifier.node.position
+                , .length = identifier.node.length
+                , .line_no = identifier.node.line_no}
+            }
+            , .end = identifier.end}; 
+    }
     return ParseError.ParseError;
+} 
+
+
+pub fn makeBinaryNode(_: std.mem.Allocator, operator: lexer.Token, right_node: ast.Expr, node: ast.Expr) !ast.Expr{
+    const loc = try getLineNumberExpr(right_node);
+    switch (operator.blunt_symbol.token_type){
+        .dot_ =>{
+            return ast.Expr{
+                .binary_op = ast.BinaryOp{
+                .op = .Dot,
+                .left = &node,
+                .right = &right_node,
+                .position = loc.position,
+                .length = loc.length,
+                .line_no = loc.line_no
+            }};
+        },
+        .minus_ =>{
+            return ast.Expr{
+                .binary_op = ast.BinaryOp{
+                .op = .Sub,
+                .left = &node,
+                .right = &right_node,
+                .position = loc.position,
+                .length = loc.length,
+                .line_no = loc.line_no
+            }};
+        },
+        .plus_ =>{
+            return ast.Expr{
+                .binary_op = ast.BinaryOp{
+                .op = .Add,
+                .left = &node,
+                .right = &right_node,
+                .position = loc.position,
+                .length = loc.length,
+                .line_no = loc.line_no
+            }};
+        },
+        .div_ =>{
+            return ast.Expr{
+                .binary_op = ast.BinaryOp{
+                    .op = .Div,
+                    .left = &node,
+                    .right = &right_node,
+                    .position = loc.position,
+                    .length = loc.length,
+                    .line_no = loc.line_no
+                }};
+        },
+        .mul_ =>{
+            return ast.Expr{
+                .binary_op = ast.BinaryOp{
+                .op = .Mul,
+                .left = &node,
+                .right = &right_node,
+                .position = loc.position,
+                .length = loc.length,
+                .line_no = loc.line_no
+            }};
+        },
+        .eq_ =>{
+            return ast.Expr{
+                .binary_op = ast.BinaryOp{
+                .op = .Eq,
+                .left = &node,
+                .right = &right_node,
+                .position = loc.position,
+                .length = loc.length,
+                .line_no = loc.line_no
+            }};
+        },
+        .neq_ =>{
+            return ast.Expr{
+                .binary_op = ast.BinaryOp{
+                .op = .Neq,
+                .left = &node,
+                .right = &right_node,
+                .position = loc.position,
+                .length = loc.length,
+                .line_no = loc.line_no
+            }};
+        },
+        .gt_ =>{
+            return ast.Expr{
+                .binary_op = ast.BinaryOp{
+                .op = .Gt,
+                .left = &node,
+                .right = &right_node,
+                .position = loc.position,
+                .length = loc.length,
+                .line_no = loc.line_no
+            }};
+        },
+        .lt_ =>{
+            return ast.Expr{
+                .binary_op = ast.BinaryOp{
+                .op = .Lt,
+                .left = &node,
+                .right = &right_node,
+                .position = loc.position,
+                .length = loc.length,
+                .line_no = loc.line_no
+            }};
+        },
+        .gte_ =>{
+            return ast.Expr{
+                .binary_op = ast.BinaryOp{
+                .op = .Gte,
+                .left = &node,
+                .right = &right_node,
+                .position = loc.position,
+                .length = loc.length,
+                .line_no = loc.line_no
+            }};
+        },
+        .lte_ =>{
+            return ast.Expr{
+                .binary_op = ast.BinaryOp{
+                .op = .Lte,
+                .left = &node,
+                .right = &right_node,
+                .position = loc.position,
+                .length = loc.length,
+                .line_no = loc.line_no
+            }};
+        },
+        .match_ =>{
+            return ast.Expr{
+                .binary_op = ast.BinaryOp{
+                .op = .Match,
+                .left = &node,
+                .right = &right_node,
+                .position = loc.position,
+                .length = loc.length,
+                .line_no = loc.line_no
+            }};
+        },
+        .and_ =>{
+            return ast.Expr{
+                .binary_op = ast.BinaryOp{
+                .op = .And,
+                .left = &node,
+                .right = &right_node,
+                .position = loc.position,
+                .length = loc.length,
+                .line_no = loc.line_no
+            }};
+        },
+        .or_ =>{
+            return ast.Expr{
+                .binary_op = ast.BinaryOp{
+                .op = .Or,
+                .left = &node,
+                .right = &right_node,
+                .position = loc.position,
+                .length = loc.length,
+                .line_no = loc.line_no
+            }};
+        },
+        .pipe_ =>{
+            return ast.Expr{
+                .binary_op = ast.BinaryOp{
+                .op = .Pipe,
+                .left = &node,
+                .right = &right_node,
+                .position = loc.position,
+                .length = loc.length,
+                .line_no = loc.line_no
+            }};
+        },
+        else => {
+            return error.InternalError;
+        }
+    }
+}
+
+pub fn makeUnaryNode(_: std.mem.Allocator, operator: lexer.Token, operand: lexer.Token, node: ast.Expr) !ast.Expr{
+    switch (operator.blunt_symbol.token_type){
+        .minus_ =>{
+            return ast.UnaryOp{
+                .op = .UMin,
+                .left = &node,
+                .length = operand.length,
+                .line_no = operand.line_no
+            };
+        },
+        .plus_ =>{
+            return ast.UnaryOp{
+                .op = .UPlus,
+                .left = &node,
+                .length = operand.length,
+                .line_no = operand.line_no
+            };
+        },
+        .not_ =>{
+            return ast.UnaryOp{
+                .op = .Not,
+                .left = &node,
+                .length = operand.length,
+                .line_no = operand.line_no
+            };
+        },
+        else => {
+            return error.InternalError;
+        }
+    }
+}
+
+
+pub inline fn getLineNumberExpr(node: ast.Expr) !struct{position: usize, length: usize, line_no: usize}{
+    switch(node){
+        .identifier => {
+            return .{
+                .position = node.identifier.position,
+                .length = node.identifier.length,
+                .line_no = node.identifier.line_no,};
+        },
+        else => {
+            return error.InternalError;
+        }
+    }
 }
 
 
@@ -414,10 +765,6 @@ fn _expect(comptime T: type, token: lexer.Token, token_target: ?T) bool {
     return false;
 }
 
-
-fn precedence() u8{
-    return 0;
-}
 
 
 pub fn deinitCompilationUnit(allocator: std.mem.Allocator, unit: ast.CompilationUnit) void {

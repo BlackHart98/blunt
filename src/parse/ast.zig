@@ -194,19 +194,34 @@ pub const ForStmt = struct {
 
 /// Available expression types
 pub const Expr = union(enum) {
-    binary_op: *BinaryOp,
+    binary_op: BinaryOp,
     unary_op: *UnaryOp,
     bracket: *Bracket,
-    identifier: *Identifier,
+    identifier: Identifier,
     function_call: *FunctionCall,
     generator: *Generator,
-    dot: *Dot,
 };
 
 pub const BinaryOp = struct {
-    op: enum(u8){ Add, Sub, Mul, Div, Pow, And, Or },
-    left: *Expr,
-    right: *Expr,
+    op: enum(u8){
+        Add, 
+        Sub, 
+        Mul, 
+        Div, 
+        Pow, 
+        And, 
+        Or, 
+        Dot, 
+        Eq, 
+        Neq, 
+        Gt, 
+        Lt, 
+        Gte, 
+        Lte, 
+        Match,
+        Pipe,},
+    left: *const Expr,
+    right: *const Expr,
     position: usize,
     length: usize,
     line_no: usize,
@@ -228,14 +243,6 @@ pub const Bracket = struct {
     line_no: usize,
 };
 
-/// Member Access
-pub const Dot = struct {
-    expr_1: *Expr,
-    expr_2: *Expr,
-    position: usize,
-    length: usize,
-    line_no: usize,
-};
 
 //------------------------------------------------------------------------------
 // Function Calls and Arguments

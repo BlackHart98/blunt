@@ -2,6 +2,7 @@ const std = @import("std");
 const lexer = @import("parse/lexer.zig");
 const ast = @import("parse/ast.zig");
 const parser = @import("parse/parser.zig");
+const io = std.debug;
 
 pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -38,7 +39,7 @@ pub fn main() !void {
         // \\@import("prelude") as prelude2
         // \\fn main() -> list[real] {fn main() -> int {} fn main() -> int {}}
         \\fn main() -> list[int] {
-        \\  const foo : int = 1;
+        \\  const foo : int = (i + ig) + y;
         \\}
     ;
     const tokens = try lexer.scanInput(allocator, code_snippet_1);
