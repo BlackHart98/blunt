@@ -149,9 +149,9 @@ pub const Statement = union(enum) {
 /// Function definition
 pub const FunctionDef = struct {
     function_id: Identifier,
-    parameters: ?[]*Parameter,
+    parameters: ?[]*const Parameter,
     return_type: Type,
-    statements: ?[]*Statement,
+    statements: ?[]*const Statement,
     position: usize,
     length: usize,
     line_no: usize,

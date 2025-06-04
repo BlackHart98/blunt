@@ -35,8 +35,8 @@ pub fn main() !void {
     //     \\}
     // ;
     const code_snippet_1 =
-        // \\@import("prelude") as prelude
-        // \\@import("prelude") as prelude2
+        \\@import("prelude") as prelude
+        \\@import("prelude") as prelude2
         // \\fn main() -> list[real] {fn main() -> int {} fn main() -> int {}}
         \\fn main() -> list[int] {
         \\  const csa : int = pi * r * (r + h);
@@ -52,8 +52,23 @@ pub fn main() !void {
     const foofoo = try parser.parseCompilationUnit(allocator, tokens);
     defer parser.deinitCompilationUnit(allocator, foofoo.node);
     // defer allocator.free(foofoo.node);
-    std.debug.print("astNode: {any}\n", .{foofoo.node.statements});
-    for (foofoo.node.statements.?) |x| {
-        std.debug.print("You're broke, Mr. {?}\n", .{x});
+    // io.print("imports: {any}\n", .{foofoo.node.import_decls});
+    // var i : usize = 0;
+    // for (foofoo.node.statements.?) |x| {
+    //     io.print("statement #{} {any}\n", .{i + 1, x});
+    //     i += 1;
+    // }
+    var import_count : usize = 0;
+    var statement_count : usize = 0;
+    if (foofoo.node.import_decls != null){
+        for(foofoo.node.import_decls.?) |_|{
+            import_count += 1;
+        }
     }
+    if (foofoo.node.statements != null){
+        for(foofoo.node.statements.?) |_|{
+            statement_count += 1;
+        }
+    }
+    io.print("summary: \n\tnumner of imports: {} \n\tnumber of statements: {}\n", .{import_count, statement_count});
 }
