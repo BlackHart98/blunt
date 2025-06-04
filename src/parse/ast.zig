@@ -250,20 +250,13 @@ pub const Bracket = struct {
 
 /// Function invocation
 pub const FunctionCall = struct {
-    function_id: *Expr,
-    args: []*Argument,
+    function_id: *const Expr,
+    args: []*const Expr,
     position: usize,
     length: usize,
     line_no: usize,
 };
 
-/// Function argument
-pub const Argument = struct {
-    arg: *Expr,
-    position: usize,
-    length: usize,
-    line_no: usize,
-};
 
 /// Generator expression for iterations
 pub const Generator = struct {

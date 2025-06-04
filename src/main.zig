@@ -39,7 +39,7 @@ pub fn main() !void {
         \\@import("prelude") as prelude2
         // \\fn main() -> list[real] {fn main() -> int {} fn main() -> int {}}
         \\fn main() -> list[int] {
-        \\  const csa : int = x.pi * r * (r + h);
+        \\  const csa : int = pi() * r * (r + h);
         \\}
     ;
     const tokens = try lexer.scanInput(allocator, code_snippet_1);

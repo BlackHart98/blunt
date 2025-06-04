@@ -389,7 +389,7 @@ pub fn parseMulOrDivExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.To
 pub fn parseDotExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
     var i = index;
     const N = tokens.?.len;
-    var factor_result = try parseFactor(allocator, tokens, i);
+    var factor_result = try parseFunctionCall(allocator, tokens, i);
     const expr_node = try allocator.create(ast.Expr);
     errdefer allocator.destroy(expr_node);
     expr_node.* = factor_result.node;
@@ -402,7 +402,7 @@ pub fn parseDotExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, 
 
             const right_node = try allocator.create(ast.Expr);
             errdefer allocator.destroy(right_node);
-            factor_result = try parseFactor(allocator, tokens, i);
+            factor_result = try parseFunctionCall(allocator, tokens, i);
             right_node.* = factor_result.node;
             i = factor_result.end;
             if (i >= N) return ParseError.ParseError;
@@ -417,54 +417,67 @@ pub fn parseDotExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, 
 }
 
 
-// pub fn parseFunctionCall(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
-//     var i = index;
-//     const N = tokens.?.len;
+pub fn parseFunctionCall(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr) {
+    var i = index;
+    const N = tokens.?.len;
 
-//     var factor_result = try parseFactor(allocator, tokens, i);
-//     const expr_node = try allocator.create(ast.Expr);
-//     errdefer allocator.destroy(expr_node);
-//     if (_expect(lexer.BluntSymbol, tokens.?[i], .open_par_)){
-//         i += 1;
-//         if (i >= N) return ParseError.ParseError;
-//         const expr_result = try parseExpr(allocator, tokens, i);
-//         // io.print("end of the expression {?}\n", .{expr_result});
-//         i = expr_result.end;
-//         if (i >= N) return ParseError.ParseError;
-//         const node = try allocator.create(ast.Expr);
-//         errdefer allocator.destroy(node);
-//         node.* = expr_result.node;
-//         // io.print("my mind is fatigued, .......... almost closed parenthesis???????? {?}\n", .{tokens.?[i]});
-//         if (_expect(lexer.BluntSymbol, tokens.?[i], .close_par_)){
-//             // io.print("my mind is fatigued, .......... closed parenthesis\n", .{});
-//             return .{.node = node.*, .end = i + 1}; 
-//         } else {
-//             return ParseError.ParseError;
-//         }
-//         return ParseError.ParseError;
-//     }
-//     // while (i < N){
-//     //     if (_expect(lexer.BluntSymbol, tokens.?[i], .dot_)){
-//     //         const op = tokens.?[i];
-//     //         i += 1;
-//     //         if (i >= N) return ParseError.ParseError;
+    const factor_result = try parseFactor(allocator, tokens, i);
+    const expr_node = try allocator.create(ast.Expr);
+    errdefer allocator.destroy(expr_node);
+    expr_node.* = factor_result.node;
+    i = factor_result.end;
 
-//     //         const right_node = try allocator.create(ast.Expr);
-//     //         errdefer allocator.destroy(right_node);
-//     //         factor_result = try parseFactor(allocator, tokens, i);
-//     //         right_node.* = factor_result.node;
-//     //         i = factor_result.end;
-//     //         if (i >= N) return ParseError.ParseError;
+    if (_expect(lexer.BluntSymbol, tokens.?[i], .open_par_)) {
+        i += 1;
+        if (i >= N) return ParseError.ParseError;
 
-//     //         const new_node = try makeBinaryNode(allocator, op, right_node, expr_node);
-//     //         expr_node.* = new_node;
-//     //     } else {
-//     //         return .{.node = expr_node.*, .end = i}; 
-//     //     }
-//     // }
-    
-// }
+        var argumentList = std.ArrayList(*const ast.Expr).init(allocator);
+        defer argumentList.deinit();
 
+        while (i < N) {
+            if (_expect(lexer.BluntSymbol, tokens.?[i], .close_par_)) {
+                const end_token = tokens.?[i];
+                i += 1;
+
+                return .{
+                    .node = ast.Expr{
+                        .function_call = .{
+                            .function_id = expr_node,
+                            .args = try argumentList.toOwnedSlice(),
+                            .position = end_token.blunt_symbol.position,
+                            .length = end_token.blunt_symbol.length,
+                            .line_no = end_token.blunt_symbol.line_no,
+                        },
+                    },
+                    .end = i,
+                };
+            }
+
+            // Parse argument expression
+            const argument_result = try parseExpr(allocator, tokens, i);
+            i = argument_result.end;
+
+            const argument_node = try allocator.create(ast.Expr);
+            errdefer allocator.destroy(argument_node);
+            argument_node.* = argument_result.node;
+            try argumentList.append(argument_node);
+
+            // After an argument, expect a comma or closing paren
+            if (i < N and _expect(lexer.BluntSymbol, tokens.?[i], .comma_)) {
+                i += 1;
+                continue;
+            } else if (i < N and _expect(lexer.BluntSymbol, tokens.?[i], .close_par_)) {
+                continue; // let the loop end naturally
+            } else {
+                return ParseError.ParseError;
+            }
+        }
+
+        return ParseError.ParseError;
+    }
+
+    return .{ .node = expr_node.*, .end = i };
+}
 
 
 pub fn parseFactor(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
