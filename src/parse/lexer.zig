@@ -241,45 +241,10 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
             '0'...'9' => {
                 try token_.append(list_of_chars[pos]);
                 lookahead = pos + 1;
-                var found_dot = false;
                 while (lookahead < input_len) { 
                     if (_isNumber(list_of_chars[lookahead])) {
                         try token_.append(list_of_chars[lookahead]);
                         lookahead += 1;
-                    } else if (list_of_chars[lookahead] == '.' and  !found_dot) {
-                        try token_.append(list_of_chars[lookahead]);
-                        found_dot = true;
-                        lookahead += 1;
-                    } else if (_isNumber(list_of_chars[lookahead]) and found_dot) {
-                        try token_.append(list_of_chars[lookahead]);
-                        lookahead += 1;
-                    } else if (list_of_chars[lookahead] == '.' and  found_dot) {
-                        try token_.append(list_of_chars[lookahead]);
-                        return .{
-                            Token{
-                                .unsupported_token = .{
-                                    .token_type = list_of_chars[pos], 
-                                    .position = pos, 
-                                    .length = lookahead, 
-                                    .line_no = newline_count
-                                }
-                            }
-                            , lookahead, newline_count
-                        };
-                    } else if (_isAlphabet(list_of_chars[lookahead])) {
-                        try token_.append(list_of_chars[lookahead]);
-                        lookahead += 1;
-                        return .{
-                            Token{
-                                .unsupported_token = .{
-                                    .token_type = list_of_chars[pos], 
-                                    .position = pos, 
-                                    .length = lookahead, 
-                                    .line_no = newline_count
-                                }
-                            }
-                            , lookahead, newline_count
-                        };
                     } else {
                         break;
                     }
@@ -400,8 +365,6 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     };
                 }
             },
-            // '\\' => {
-            // }
             '+' => {
                 try token_.append(list_of_chars[pos]);
                 lookahead = pos + 1;
@@ -780,122 +743,31 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
             },
             ' ' => {
                 lookahead += 1;
-                // return .{
-                //     Token{
-                //         .blunt_symbol = .{
-                //             .token_type = BluntSymbol.horizontal_wht_spc_, 
-                //             .position = pos, 
-                //             .length = lookahead, 
-                //             .line_no = newline_count
-                //         }
-                //     }
-                //     , lookahead, newline_count
-                // };
                 return .{null, lookahead, newline_count};
             },
             '\n' => {
                 lookahead += 1;
                 newline_count += 1;
-                // return .{
-                //     Token{
-                //         .blunt_symbol = .{
-                //             .token_type = BluntSymbol.new_line_, 
-                //             .position = pos, 
-                //             .length = lookahead, 
-                //             .line_no = newline_count - 1
-                //         }
-                //     }
-                //     , lookahead, newline_count
-                // };
                 return .{null, lookahead, newline_count};
             },
             '\t' => {
                 lookahead += 1;
-                // return .{
-                //     Token{
-                //         .blunt_symbol = .{
-                //             .token_type = BluntSymbol.horizontal_wht_spc_, 
-                //             .position = pos, 
-                //             .length = lookahead, 
-                //             .line_no = newline_count
-                //         }
-                //     }
-                //     , lookahead, newline_count
-                // };
-                // continue;
                 return .{null, lookahead, newline_count};
             },
             '.' => {
                 try token_.append(list_of_chars[pos]);
                 lookahead = pos + 1;
-                var found_dot = true;
-                while (lookahead < input_len) { 
-                    if (_isNumber(list_of_chars[lookahead])) {
-                        try token_.append(list_of_chars[lookahead]);
-                        lookahead += 1;
-                    } else if (list_of_chars[lookahead] == '.' and  !found_dot){
-                        try token_.append(list_of_chars[lookahead]);
-                        found_dot = true;
-                        lookahead += 1;
-                    } else if (_isNumber(list_of_chars[lookahead]) and found_dot) {
-                        try token_.append(list_of_chars[lookahead]);
-                        lookahead += 1;
-                    } else if (list_of_chars[lookahead] == '.' and  found_dot) {
-                        try token_.append(list_of_chars[lookahead]);
-                        return .{
-                            Token{
-                                .unsupported_token = .{
-                                    .token_type = list_of_chars[pos], 
-                                    .position = pos, 
-                                    .length = lookahead, 
-                                    .line_no = newline_count
-                                }
-                            }
-                            , lookahead, newline_count
-                        };
-                    } else if (_isAlphabet(list_of_chars[lookahead])) {
-                        try token_.append(list_of_chars[lookahead]);
-                        lookahead += 1;
-                        return .{
-                            Token{
-                                .unsupported_token = .{
-                                    .token_type = list_of_chars[pos], 
-                                    .position = pos, 
-                                    .length = lookahead, 
-                                    .line_no = newline_count
-                                }
-                            }
-                            , lookahead, newline_count
-                        };
-                    } else {
-                        break;
+                return .{
+                    Token{
+                        .blunt_symbol = .{ 
+                            .token_type = BluntSymbol.dot_, 
+                            .position = pos, 
+                            .length = lookahead, 
+                            .line_no = newline_count
+                        }
                     }
-                }
-                if ((token_.items).len > 1) {
-                    return .{
-                        Token{
-                            .number = .{
-                                .token_type = try token_.toOwnedSlice(), 
-                                .position = pos, 
-                                .length = lookahead, 
-                                .line_no = newline_count
-                            }
-                        }
-                        , lookahead, newline_count
-                    };
-                } else {
-                    return .{
-                        Token{
-                            .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.dot_, 
-                                .position = pos, 
-                                .length = lookahead, 
-                                .line_no = newline_count
-                            }
-                        }
-                        , lookahead, newline_count
-                    };
-                }
+                    , lookahead, newline_count
+                };
             },
             '!' => {
                 try token_.append(list_of_chars[pos]);

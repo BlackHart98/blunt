@@ -39,18 +39,18 @@ pub fn main() !void {
         \\@import("prelude") as prelude2
         // \\fn main() -> list[real] {fn main() -> int {} fn main() -> int {}}
         \\fn main() -> list[int] {
-        \\  const csa : int = pi * r * (r + h);
+        \\  const csa : int = x.pi * r * (r + h);
         \\}
     ;
     const tokens = try lexer.scanInput(allocator, code_snippet_1);
     defer allocator.free(tokens);
     // std.debug.print("You're broke, Mr. {?}\n", .{foobar[1]});
-    // for (tokens) |x|{
-    //     std.debug.print("You're broke, Mr. {?}\n", .{x});
-    // }
+    for (tokens) |x|{
+        io.print("token: {?}\n", .{x});
+    }
 
-    const foofoo = try parser.parseCompilationUnit(allocator, tokens);
-    defer parser.deinitCompilationUnit(allocator, foofoo.node);
+    const ast_node = try parser.parseCompilationUnit(allocator, tokens);
+    defer parser.deinitCompilationUnit(allocator, ast_node.node);
     // defer allocator.free(foofoo.node);
     // io.print("imports: {any}\n", .{foofoo.node.import_decls});
     // var i : usize = 0;
@@ -60,13 +60,13 @@ pub fn main() !void {
     // }
     var import_count : usize = 0;
     var statement_count : usize = 0;
-    if (foofoo.node.import_decls != null){
-        for(foofoo.node.import_decls.?) |_|{
+    if (ast_node.node.import_decls != null){
+        for(ast_node.node.import_decls.?) |_|{
             import_count += 1;
         }
     }
-    if (foofoo.node.statements != null){
-        for(foofoo.node.statements.?) |_|{
+    if (ast_node.node.statements != null){
+        for(ast_node.node.statements.?) |_|{
             statement_count += 1;
         }
     }

@@ -358,7 +358,7 @@ pub fn parseMulOrDivExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.To
     // io.print("my mind is fatigued, .......... parseMulOrDivExpr\n", .{});
     var i = index;
     const N = tokens.?.len;
-    var factor_result = try parseFactor(allocator, tokens, i);
+    var factor_result = try parseDotExpr(allocator, tokens, i);
     const expr_node = try allocator.create(ast.Expr);
     errdefer allocator.destroy(expr_node);
     expr_node.* = factor_result.node;
@@ -371,7 +371,7 @@ pub fn parseMulOrDivExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.To
 
             const right_node = try allocator.create(ast.Expr);
             errdefer allocator.destroy(right_node);
-            factor_result = try parseFactor(allocator, tokens, i);
+            factor_result = try parseDotExpr(allocator, tokens, i);
             right_node.* = factor_result.node;
             i = factor_result.end;
             if (i >= N) return ParseError.ParseError;
@@ -387,7 +387,6 @@ pub fn parseMulOrDivExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.To
 
 
 pub fn parseDotExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
-    // io.print("my mind is fatigued, .......... parseDotExpr\n", .{});
     var i = index;
     const N = tokens.?.len;
     var factor_result = try parseFactor(allocator, tokens, i);
