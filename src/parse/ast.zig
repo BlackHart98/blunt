@@ -199,6 +199,7 @@ pub const Expr = union(enum) {
     bracket: *Bracket,
     identifier: Identifier,
     function_call: FunctionCall,
+    number_expr: Number,
     generator: Generator,
 };
 
@@ -219,7 +220,8 @@ pub const BinaryOp = struct {
         Gte, 
         Lte, 
         Match,
-        Pipe,},
+        Pipe,
+        Combine,},
     left: *const Expr,
     right: *const Expr,
     position: usize,
@@ -238,6 +240,15 @@ pub const UnaryOp = struct {
 /// Expression Grouping
 pub const Bracket = struct {
     expr: *Expr,
+    position: usize,
+    length: usize,
+    line_no: usize,
+};
+
+
+/// Expression Grouping
+pub const Number = struct {
+    number: []const u8,
     position: usize,
     length: usize,
     line_no: usize,

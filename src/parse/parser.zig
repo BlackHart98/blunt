@@ -310,7 +310,82 @@ pub inline fn parseParameter(_: std.mem.Allocator, _: ?[]const lexer.Token, _: u
 
 pub fn parseExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
     io.print("parse expression, token_no: {}, cunrent_token: \n\t{}\n", .{index, tokens.?[index]});
-    return try parseAddOrSubExpr(allocator, tokens, index);
+    return try parseRelationalExpr(allocator, tokens, index);
+}
+
+
+pub fn parseRelationalExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr) {
+    io.print("parse relations expression, token_no: {}, cunrent_token: \n\t{}\n", .{index, tokens.?[index]});
+    var i = index;
+    const N = tokens.?.len;
+    var factor_result = try parseAndOrOrExpr(allocator, tokens, i);
+    const expr_node = try allocator.create(ast.Expr);
+    errdefer allocator.destroy(expr_node);
+    expr_node.* = factor_result.node;
+    i = factor_result.end;
+    while (i < N){
+        if (i >= N) return ParseError.ParseError;
+        if (_expect(lexer.BluntSymbol, tokens.?[i], .lte_) 
+            or _expect(lexer.BluntSymbol, tokens.?[i], .gte_)
+            or _expect(lexer.BluntSymbol, tokens.?[i], .lt_)
+            or _expect(lexer.BluntSymbol, tokens.?[i], .gt_)
+            or _expect(lexer.BluntSymbol, tokens.?[i], .neq_)
+            or _expect(lexer.BluntSymbol, tokens.?[i], .eq_)){
+            const op = tokens.?[i];
+            i += 1;
+            if (i >= N) return ParseError.ParseError;
+
+            const right_node = try allocator.create(ast.Expr);
+            errdefer allocator.destroy(right_node);
+            factor_result = try parseAndOrOrExpr(allocator, tokens, i);
+            right_node.* = factor_result.node;
+            i = factor_result.end;
+            if (i >= N) return ParseError.ParseError;
+
+            const new_node = try makeBinaryNode(allocator, op, right_node, expr_node);
+            expr_node.* = new_node;
+        } else {
+            io.print("exiting add or sub expression {?}\n", .{tokens.?[i]});
+            return .{.node = expr_node.*, .end = i}; 
+        }
+    }
+    return ParseError.InternalError;
+}
+
+
+pub fn parseAndOrOrExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr) {
+    io.print("parse and or or expression, token_no: {}, cunrent_token: \n\t{}\n", .{index, tokens.?[index]});
+    var i = index;
+    const N = tokens.?.len;
+    var factor_result = try parseAddOrSubExpr(allocator, tokens, i);
+    io.print("left expression: \n\t{?}\n", .{factor_result.node});
+    const expr_node = try allocator.create(ast.Expr);
+    errdefer allocator.destroy(expr_node);
+    expr_node.* = factor_result.node;
+    i = factor_result.end;
+    while (i < N){
+        if (i >= N) return ParseError.ParseError;
+        if (_expect(lexer.BluntSymbol, tokens.?[i], .or_) or _expect(lexer.BluntSymbol, tokens.?[i], .and_)){
+            const op = tokens.?[i];
+            i += 1;
+            if (i >= N) return ParseError.ParseError;
+
+            const right_node = try allocator.create(ast.Expr);
+            errdefer allocator.destroy(right_node);
+            factor_result = try parseAddOrSubExpr(allocator, tokens, i);
+            right_node.* = factor_result.node;
+            i = factor_result.end;
+            if (i >= N) return ParseError.ParseError;
+
+            // io.print("creating node...\n", .{});
+            const new_node = try makeBinaryNode(allocator, op, right_node, expr_node);
+            expr_node.* = new_node;
+        } else {
+            io.print("exiting add or sub expression {?}\n", .{tokens.?[i]});
+            return .{.node = expr_node.*, .end = i}; 
+        }
+    }
+    return .{.node = expr_node.*, .end = i};
 }
 
 
@@ -358,13 +433,45 @@ pub fn parseMulOrDivExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.To
     // io.print("my mind is fatigued, .......... parseMulOrDivExpr\n", .{});
     var i = index;
     const N = tokens.?.len;
-    var factor_result = try parseDotExpr(allocator, tokens, i);
+    var factor_result = try parseCombineExpr(allocator, tokens, i);
     const expr_node = try allocator.create(ast.Expr);
     errdefer allocator.destroy(expr_node);
     expr_node.* = factor_result.node;
     i = factor_result.end;
     while (i < N){
         if (_expect(lexer.BluntSymbol, tokens.?[i], .div_) or _expect(lexer.BluntSymbol, tokens.?[i], .mul_)){
+            const op = tokens.?[i];
+            i += 1;
+            if (i >= N) return ParseError.ParseError;
+
+            const right_node = try allocator.create(ast.Expr);
+            errdefer allocator.destroy(right_node);
+            factor_result = try parseCombineExpr(allocator, tokens, i);
+            right_node.* = factor_result.node;
+            i = factor_result.end;
+            if (i >= N) return ParseError.ParseError;
+
+            const new_node = try makeBinaryNode(allocator, op, right_node, expr_node);
+            expr_node.* = new_node;
+        } else {
+            return .{.node = expr_node.*, .end = i}; 
+        }
+    }
+    return .{.node = expr_node.*, .end = i}; 
+}
+
+
+pub fn parseCombineExpr(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) ParseResult(ast.Expr){
+    io.print("parse combine expression, token_no: {}, cunrent_token: \n\t{}\n", .{index, tokens.?[index]});
+    var i = index;
+    const N = tokens.?.len;
+    var factor_result = try parseDotExpr(allocator, tokens, i);
+    const expr_node = try allocator.create(ast.Expr);
+    errdefer allocator.destroy(expr_node);
+    expr_node.* = factor_result.node;
+    i = factor_result.end;
+    while (i < N){
+        if (_expect(lexer.BluntSymbol, tokens.?[i], .combine_)){
             const op = tokens.?[i];
             i += 1;
             if (i >= N) return ParseError.ParseError;
@@ -570,6 +677,15 @@ pub fn parseFactor(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, i
                 , .line_no = identifier.node.line_no}
             }
             , .end = identifier.end}; 
+    } else if (_expect(TokenCategory, tokens.?[i], .num)){
+        return .{.node = .{ 
+            .number_expr = ast.Number{
+                .number = tokens.?[i].number.token_type
+                , .position = tokens.?[i].number.position
+                , .length = tokens.?[i].number.length
+                , .line_no = tokens.?[i].number.line_no}
+            }
+            , .end = i + 1}; 
     } else {
         return ParseError.ParseError;
     }
@@ -743,6 +859,17 @@ pub fn makeBinaryNode(allocator: std.mem.Allocator, operator: lexer.Token, right
             return ast.Expr{
                 .binary_op = ast.BinaryOp{
                 .op = .Pipe,
+                .left = left,
+                .right = right,
+                .position = loc.position,
+                .length = loc.length,
+                .line_no = loc.line_no
+            }};
+        },
+        .combine_ =>{
+            return ast.Expr{
+                .binary_op = ast.BinaryOp{
+                .op = .Combine,
                 .left = left,
                 .right = right,
                 .position = loc.position,

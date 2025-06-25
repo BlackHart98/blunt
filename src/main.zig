@@ -14,6 +14,7 @@ pub fn main() !void {
         // \\fn main() -> list[real] {fn main() -> int {} fn main() -> int {}}
         \\fn main() -> list[int] {
         \\  const csa : int = pi()(w);
+        \\  const tsa : int = 5 |>foo |>some_func;
         \\}
     ;
     const tokens = try lexer.scanInput(allocator, code_snippet_1);
