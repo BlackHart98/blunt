@@ -159,8 +159,8 @@ pub const FunctionDef = struct {
 
 /// Variable assignment
 pub const AssignmentStmt = struct {
-    variable: Identifier,
-    expr: ?*Expr,
+    lval: *Expr,
+    rval: ?*Expr,
     position: usize,
     length: usize,
     line_no: usize,
@@ -188,6 +188,16 @@ pub const ForStmt = struct {
     line_no: usize,
 };
 
+
+/// Return statement
+pub const ReturnStmt = struct {
+    return_expr: *Expr,
+    position: usize,
+    length: usize,
+    line_no: usize,
+};
+
+
 //------------------------------------------------------------------------------
 // Expressions
 //------------------------------------------------------------------------------
@@ -200,6 +210,8 @@ pub const Expr = union(enum) {
     identifier: Identifier,
     function_call: FunctionCall,
     number_expr: Number,
+    string_expr: String,
+    sstring_expr: String,
     generator: Generator,
 };
 
@@ -245,14 +257,22 @@ pub const Bracket = struct {
     line_no: usize,
 };
 
-
-/// Expression Grouping
+// Number
 pub const Number = struct {
     number: []const u8,
     position: usize,
     length: usize,
     line_no: usize,
 };
+
+// String
+pub const String = struct {
+    string: []const u8,
+    position: usize,
+    length: usize,
+    line_no: usize,
+};
+
 
 
 //------------------------------------------------------------------------------

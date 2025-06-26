@@ -6,7 +6,7 @@ const _utils = @import("../utils.zig");
 const io = std.debug;
 
 const ParseError = error{ ParseError, OutOfMemory, UnsupportedToken, InternalError };
-const TokenCategory = enum { str, id, num, cmt };
+const TokenCategory = enum { sstr, str, id, num, cmt };
 pub fn ParseResult(comptime T: type) type {
     return ParseError!struct {
         node: T,
@@ -121,7 +121,16 @@ pub fn parseStatement(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token
     } else if (_expect(lexer.Keyword, tokens.?[index], .const_) or _expect(lexer.Keyword, tokens.?[index], .var_)) {
         const declaration_desc = tokens.?[index].keyword_token.token_type;
         return try parseDeclarationStmt(declaration_desc, allocator, tokens, index);
-    } else {
+    } else if (_expect(lexer.Keyword, tokens.?[index], .if_)) {
+        io.print("if statement\n", .{});
+        return ParseError.ParseError;
+    } else if (_expect(lexer.Keyword, tokens.?[index], .return_)) {
+        io.print("return statement\n", .{});
+        return ParseError.ParseError;
+    } else if (_expect(lexer.Keyword, tokens.?[index], .for_)) {
+        io.print("for statement\n", .{});
+        return ParseError.ParseError;
+    }else {
         return ParseError.ParseError;
     }
 }
@@ -686,6 +695,24 @@ pub fn parseFactor(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, i
                 , .line_no = tokens.?[i].number.line_no}
             }
             , .end = i + 1}; 
+    } else if (_expect(TokenCategory, tokens.?[i], .str)){
+        return .{.node = .{ 
+            .string_expr = ast.String{
+                .string = tokens.?[i].str_lit_double.token_type
+                , .position = tokens.?[i].str_lit_double.position
+                , .length = tokens.?[i].str_lit_double.length
+                , .line_no = tokens.?[i].str_lit_double.line_no}
+            }
+            , .end = i + 1}; 
+    } else if (_expect(TokenCategory, tokens.?[i], .sstr)){
+        return .{.node = .{ 
+            .string_expr = ast.String{
+                .string = tokens.?[i].str_lit_single.token_type
+                , .position = tokens.?[i].str_lit_single.position
+                , .length = tokens.?[i].str_lit_single.length
+                , .line_no = tokens.?[i].str_lit_single.line_no}
+            }
+            , .end = i + 1}; 
     } else {
         return ParseError.ParseError;
     }
@@ -1016,11 +1043,15 @@ fn _expect(comptime T: type, token: lexer.Token, token_target: ?T) bool {
             else => return false,
         }
     } else if (T == TokenCategory) {
-        if (token_target.? == .str) {
+        if (token_target.? == .sstr) {
             switch (token) {
                 .str_lit_single => {
                     return true;
                 },
+                else => return false,
+            }
+        } else if (token_target.? == .str) {
+            switch (token) {
                 .str_lit_double => {
                     return true;
                 },

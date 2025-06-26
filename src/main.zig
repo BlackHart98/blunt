@@ -11,10 +11,10 @@ pub fn main() !void {
     const code_snippet_1 =
         \\@import("prelude") as prelude
         \\@import("prelude") as prelude2
-        // \\fn main() -> list[real] {fn main() -> int {} fn main() -> int {}}
-        \\fn main() -> list[int] {
+        \\fn main() -> int {
         \\  const csa : int = pi()(w);
         \\  const tsa : int = 5 |>foo |>some_func;
+        // \\  return 0;
         \\}
     ;
     const tokens = try lexer.scanInput(allocator, code_snippet_1);
