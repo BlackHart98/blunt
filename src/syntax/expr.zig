@@ -26,6 +26,7 @@ pub inline fn parseParameter(_: std.mem.Allocator, _: ?[]const lexer.Token, _: u
 }
 
 
+// todo: revisit parsing types
 pub fn parseType(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token, index: usize) utils.ParseResult(ast.Type) {
     var i: usize = index;
     const N: usize = tokens.?.len;
