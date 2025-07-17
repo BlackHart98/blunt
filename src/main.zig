@@ -1,7 +1,9 @@
 const std = @import("std");
-const lexer = @import("parse/lexer.zig");
-const ast = @import("parse/ast.zig");
-const parser = @import("parse/parser.zig");
+const lexer_node = @import("lexer/definitions.zig");
+const tokenizer = @import("lexer/lexer.zig");
+const ast = @import("syntax/definitions.zig");
+const parser = @import("syntax/statements.zig");
+const common = @import("syntax/common.zig");
 const io = std.debug;
 
 pub fn main() !void {
@@ -12,12 +14,12 @@ pub fn main() !void {
         \\@import("prelude") as prelude
         \\@import("prelude") as prelude2
         \\fn main() -> int {
-        \\  const csa : int = pi()(w);
+        \\  const csa : int = pi()(1);
         \\  const tsa : int = 5 |>foo |>some_func;
         // \\  return 0;
         \\}
     ;
-    const tokens = try lexer.scanInput(allocator, code_snippet_1);
+    const tokens = try tokenizer.scanInput(allocator, code_snippet_1);
     defer allocator.free(tokens);
     // std.debug.print("You're broke, Mr. {?}\n", .{foobar[1]});
     for (tokens) |x|{
@@ -25,7 +27,7 @@ pub fn main() !void {
     }
 
     const ast_node = try parser.parseCompilationUnit(allocator, tokens);
-    defer parser.deinitCompilationUnit(allocator, ast_node.node);
+    defer common.deinitCompilationUnit(allocator, ast_node.node);
     // defer allocator.free(foofoo.node);
     // io.print("imports: {any}\n", .{foofoo.node.import_decls});
     // var i : usize = 0;

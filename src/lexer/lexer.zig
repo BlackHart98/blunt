@@ -1,63 +1,9 @@
 const mem = @import("std").mem; 
 const std = @import("std");
-
-pub const Keyword = enum(u8) { 
-    // keywords
-    fn_,        if_,     import_, extend_,   var_,
-    const_,     return_, visit_,   top_down_,  bottom_up_,
-    innermost_, fail_,   insert_,  outermost_, top_down_break_,
-    for_,       elif_,   else_,    external_, sypnosis_,
-    typedef_,   data_,   in_,      true_,      false_,
-    try_,       catch_,  as_,
-
-    // data types
-    any_,       num_,    int_,
-    str_,       real_,   list_,    tuple_,     rel_,
-    lrel_,      map_,    void_,    set_,       node_,
-    loc_,       itr_,
-};
+const lexer_node = @import("definitions.zig");
 
 
-pub const BluntSymbol = enum(u8) { 
-    // symbols
-    pipe_,          generic_symbol_,   yield_,          fwd_arr_,    wildcard_,
-    plus_,          minus_,            div_,            mul_,        incr_,
-    decr_,          rmul_,             rdiv_,           eq_,         neq_,
-    gt_,            lt_,               gte_,            lte_,        bind_,
-    colon_,         match_,            semi_colon_,     new_line_,   horizontal_wht_spc_,
-    comma_,         dot_,              upper_bound_,    open_par_,  close_par_,
-    open_curly_,    close_curly_,      open_bracket_,   close_bracket_,
-    and_,           or_,               not_,            combine_,
-};
-
-
-
-pub const Token = union(enum) {
-    keyword_token: TokenComptime(?Keyword),
-    identifier_token: TokenComptime([]const u8),
-    coment_single_line: TokenComptime([]const u8),
-    coment_multi_line: TokenComptime([]const u8),
-    esc_identifier_token: TokenComptime([]const u8),
-    str_lit_single: TokenComptime([]const u8),
-    str_lit_double: TokenComptime([]const u8),
-    special_char: TokenComptime([]const u8),
-    blunt_symbol: TokenComptime(BluntSymbol),
-    number: TokenComptime([]const u8),
-    unsupported_token: TokenComptime(u8),
-};
-
-
-pub fn TokenComptime(comptime T : type) type {
-    return struct {
-        token_type : T,
-        position : usize,
-        length : usize,
-        line_no : usize,
-    };
-}
-
-
-pub inline fn partialEqToken(token_1: Token, token_2: Token) bool{
+pub inline fn partialEqToken(token_1: lexer_node.Token, token_2: lexer_node.Token) bool{
     if (@TypeOf(token_1) != @TypeOf(token_2)){
         return false;
     }
@@ -110,94 +56,94 @@ pub inline fn partialEqToken(token_1: Token, token_2: Token) bool{
 }
 
 
-fn _mapToKeyword(token: *const []const u8) ?Keyword {
+fn _mapToKeyword(token: *const []const u8) ?lexer_node.Keyword {
     const ptr_token = token.*;
     if (mem.eql(u8, ptr_token, "fn")) {
-        return Keyword.fn_;
+        return lexer_node.Keyword.fn_;
     } else if (mem.eql(u8, ptr_token, "if")) {
-        return Keyword.if_;
+        return lexer_node.Keyword.if_;
     } else if (mem.eql(u8, ptr_token, "@import")) {
-        return Keyword.import_;
+        return lexer_node.Keyword.import_;
     } else if (mem.eql(u8, ptr_token, "@import")) {
-        return Keyword.import_;
+        return lexer_node.Keyword.import_;
     }else if (mem.eql(u8, ptr_token, "as")) {
-        return Keyword.as_;
+        return lexer_node.Keyword.as_;
     } else if (mem.eql(u8, ptr_token, "var")) {
-        return Keyword.var_;
+        return lexer_node.Keyword.var_;
     } else if (mem.eql(u8, ptr_token, "const")) {
-        return Keyword.const_;
+        return lexer_node.Keyword.const_;
     } else if (mem.eql(u8, ptr_token, "return")) {
-        return Keyword.return_;
+        return lexer_node.Keyword.return_;
     } else if (mem.eql(u8, ptr_token, "visit")) {
-        return Keyword.visit_;
+        return lexer_node.Keyword.visit_;
     } else if (mem.eql(u8, ptr_token, "top_down")) {
-        return Keyword.top_down_;
+        return lexer_node.Keyword.top_down_;
     } else if (mem.eql(u8, ptr_token, "bottom_up")) {
-        return Keyword.bottom_up_;
+        return lexer_node.Keyword.bottom_up_;
     } else if (mem.eql(u8, ptr_token, "innermost")) {
-        return Keyword.innermost_;
+        return lexer_node.Keyword.innermost_;
     } else if (mem.eql(u8, ptr_token, "fail")) {
-        return Keyword.fail_;
+        return lexer_node.Keyword.fail_;
     } else if (mem.eql(u8, ptr_token, "insert")) {
-        return Keyword.insert_;
+        return lexer_node.Keyword.insert_;
     } else if (mem.eql(u8, ptr_token, "outermost")) {
-        return Keyword.outermost_;
+        return lexer_node.Keyword.outermost_;
     } else if (mem.eql(u8, ptr_token, "top_down_break")) {
-        return Keyword.top_down_break_;
+        return lexer_node.Keyword.top_down_break_;
     } else if (mem.eql(u8, ptr_token, "for")) {
-        return Keyword.for_;
+        return lexer_node.Keyword.for_;
     } else if (mem.eql(u8, ptr_token, "elif")) {
-        return Keyword.elif_;
+        return lexer_node.Keyword.elif_;
     } else if (mem.eql(u8, ptr_token, "else")) {
-        return Keyword.else_;
+        return lexer_node.Keyword.else_;
     } else if (mem.eql(u8, ptr_token, "@external")) {
-        return Keyword.external_;
+        return lexer_node.Keyword.external_;
     } else if (mem.eql(u8, ptr_token, "@sypnosis")) {
-        return Keyword.sypnosis_;
+        return lexer_node.Keyword.sypnosis_;
     } else if (mem.eql(u8, ptr_token, "typedef")) {
-        return Keyword.typedef_;
+        return lexer_node.Keyword.typedef_;
     } else if (mem.eql(u8, ptr_token, "data")) {
-        return Keyword.data_;
+        return lexer_node.Keyword.data_;
     } else if (mem.eql(u8, ptr_token, "in")) {
-        return Keyword.in_;
+        return lexer_node.Keyword.in_;
     } else if (mem.eql(u8, ptr_token, "true")) {
-        return Keyword.true_;
+        return lexer_node.Keyword.true_;
     } else if (mem.eql(u8, ptr_token, "false")) {
-        return Keyword.false_;
+        return lexer_node.Keyword.false_;
     } else if (mem.eql(u8, ptr_token, "try")) {
-        return Keyword.try_;
+        return lexer_node.Keyword.try_;
     } else if (mem.eql(u8, ptr_token, "catch")) {
-        return Keyword.catch_;
+        return lexer_node.Keyword.catch_;
     } else if (mem.eql(u8, ptr_token, "any")) {
-        return Keyword.any_;
+        return lexer_node.Keyword.any_;
     } else if (mem.eql(u8, ptr_token, "num")) {
-        return Keyword.num_;
+        return lexer_node.Keyword.num_;
     } else if (mem.eql(u8, ptr_token, "int")) {
-        return Keyword.int_;
+        return lexer_node.Keyword.int_;
     } else if (mem.eql(u8, ptr_token, "str")) {
-        return Keyword.str_;
+        return lexer_node.Keyword.str_;
     } else if (mem.eql(u8, ptr_token, "real")) {
-        return Keyword.real_;
+        return lexer_node.Keyword.real_;
     } else if (mem.eql(u8, ptr_token, "list")) {
-        return Keyword.list_;
+        return lexer_node.Keyword.list_;
     } else if (mem.eql(u8, ptr_token, "tuple")) {
-        return Keyword.tuple_;
+        return lexer_node.Keyword.tuple_;
     } else if (mem.eql(u8, ptr_token, "rel")) {
-        return Keyword.rel_;
+        return lexer_node.Keyword.rel_;
     } else if (mem.eql(u8, ptr_token, "lrel")) {
-        return Keyword.lrel_;
+        return lexer_node.Keyword.lrel_;
     } else if (mem.eql(u8, ptr_token, "map")) {
-        return Keyword.map_;
+        return lexer_node.Keyword.map_;
     } else if (mem.eql(u8, ptr_token, "void")) {
-        return Keyword.void_;
+        return lexer_node.Keyword.void_;
     } else if (mem.eql(u8, ptr_token, "set")) {
-        return Keyword.set_;
+        return lexer_node.Keyword.set_;
     } else if (mem.eql(u8, ptr_token, "node")) {
-        return Keyword.node_;
+        return lexer_node.Keyword.node_;
     } else if (mem.eql(u8, ptr_token, "loc")) {
-        return Keyword.loc_;
+        return lexer_node.Keyword.loc_;
     } else if (mem.eql(u8, ptr_token, "itr")) {
-        return Keyword.itr_;
+        return lexer_node.Keyword.itr_;
     } else {
         return null;
     }
@@ -207,8 +153,8 @@ fn _mapToKeyword(token: *const []const u8) ?Keyword {
 const LexerError = error{LexerError, OutOfMemory};
 
 
-pub fn scanInput(allocator: std.mem.Allocator, input: []const u8) LexerError![]Token {
-    var result = std.ArrayList(Token).init(allocator);
+pub fn scanInput(allocator: std.mem.Allocator, input: []const u8) LexerError![]lexer_node.Token {
+    var result = std.ArrayList(lexer_node.Token).init(allocator);
     errdefer result.deinit();
     
     var counter: usize = 0;
@@ -228,7 +174,7 @@ pub fn scanInput(allocator: std.mem.Allocator, input: []const u8) LexerError![]T
 }
 
 
-inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []const u8, input_len: usize, newline_count_: usize) !struct{?Token, usize, usize} {
+inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []const u8, input_len: usize, newline_count_: usize) !struct{?lexer_node.Token, usize, usize} {
         var lookahead: usize = pos;
         
         var token_ = std.ArrayList(u8).init(allocator);
@@ -250,7 +196,7 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     }
                 }
                 return .{
-                    Token{
+                    lexer_node.Token{
                         .number = .{
                             .token_type = try token_.toOwnedSlice(), 
                             .position = pos, 
@@ -272,7 +218,7 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                         try token_.append(list_of_chars[lookahead]);
                         lookahead += 1;
                         return .{
-                            Token{
+                            lexer_node.Token{
                                 .unsupported_token = .{
                                     .token_type = list_of_chars[pos], 
                                     .position = pos, 
@@ -288,9 +234,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                 }
                 if (token_.items.len > 1){
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{
-                                .token_type = BluntSymbol.generic_symbol_, 
+                                .token_type = lexer_node.BluntSymbol.generic_symbol_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -300,7 +246,7 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     };
                 } else {
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .unsupported_token = .{
                                     .token_type = list_of_chars[pos], 
                                     .position = pos, 
@@ -323,7 +269,7 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                         try token_.append(list_of_chars[lookahead]);
                         lookahead += 1;
                         return .{
-                            Token{
+                            lexer_node.Token{
                                 .unsupported_token = .{
                                     .token_type = list_of_chars[pos], 
                                     .position = pos, 
@@ -341,7 +287,7 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
 
                 if (keyword != null){
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .keyword_token = .{
                                 .token_type = keyword, 
                                 .position = pos, 
@@ -353,7 +299,7 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     };
                 } else {
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .unsupported_token = .{
                                 .token_type = list_of_chars[pos], 
                                 .position = pos, 
@@ -372,9 +318,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     try token_.append(list_of_chars[lookahead]);
                     lookahead += 1;
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.incr_, 
+                                .token_type = lexer_node.BluntSymbol.incr_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -384,9 +330,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     };
                 } else{
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.plus_, 
+                                .token_type = lexer_node.BluntSymbol.plus_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -403,9 +349,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     try token_.append(list_of_chars[lookahead]);
                     lookahead += 1;
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.rmul_, 
+                                .token_type = lexer_node.BluntSymbol.rmul_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -415,9 +361,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     };
                 } else {
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.mul_, 
+                                .token_type = lexer_node.BluntSymbol.mul_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -434,9 +380,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     try token_.append(list_of_chars[lookahead]);
                     lookahead += 1;
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.rdiv_, 
+                                .token_type = lexer_node.BluntSymbol.rdiv_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -469,9 +415,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     return .{null, lookahead, newline_count};
                 } else {
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.div_, 
+                                .token_type = lexer_node.BluntSymbol.div_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -488,9 +434,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     try token_.append(list_of_chars[lookahead]);
                     lookahead += 1;
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.eq_, 
+                                .token_type = lexer_node.BluntSymbol.eq_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -500,9 +446,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     };
                 } else {
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.bind_, 
+                                .token_type = lexer_node.BluntSymbol.bind_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -519,9 +465,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     try token_.append(list_of_chars[lookahead]);
                     lookahead += 1;
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.match_, 
+                                .token_type = lexer_node.BluntSymbol.match_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -531,9 +477,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     };
                 } else {
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.colon_, 
+                                .token_type = lexer_node.BluntSymbol.colon_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -546,9 +492,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
             ';' => {
                 lookahead += 1;
                 return .{
-                    Token{
+                    lexer_node.Token{
                         .blunt_symbol = .{ 
-                            .token_type = BluntSymbol.semi_colon_, 
+                            .token_type = lexer_node.BluntSymbol.semi_colon_, 
                             .position = pos, 
                             .length = lookahead, 
                             .line_no = newline_count
@@ -560,9 +506,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
             ',' => {
                 lookahead += 1;
                 return .{
-                    Token{
+                    lexer_node.Token{
                         .blunt_symbol = .{ 
-                            .token_type = BluntSymbol.comma_, 
+                            .token_type = lexer_node.BluntSymbol.comma_, 
                             .position = pos, 
                             .length = lookahead, 
                             .line_no = newline_count
@@ -577,9 +523,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     try token_.append(list_of_chars[lookahead]);
                     lookahead += 1;
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.gte_, 
+                                .token_type = lexer_node.BluntSymbol.gte_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -589,9 +535,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     };
                 } else {
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.gt_, 
+                                .token_type = lexer_node.BluntSymbol.gt_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -607,9 +553,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     try token_.append(list_of_chars[lookahead]);
                     lookahead += 1;
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.lte_, 
+                                .token_type = lexer_node.BluntSymbol.lte_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -621,9 +567,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     try token_.append(list_of_chars[lookahead]);
                     lookahead += 1;
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.upper_bound_, 
+                                .token_type = lexer_node.BluntSymbol.upper_bound_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -635,9 +581,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     try token_.append(list_of_chars[lookahead]);
                     lookahead += 1;
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.yield_, 
+                                .token_type = lexer_node.BluntSymbol.yield_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -647,9 +593,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     };
                 } else{
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.lt_, 
+                                .token_type = lexer_node.BluntSymbol.lt_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -666,9 +612,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     try token_.append(list_of_chars[lookahead]);
                     lookahead += 1;
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.decr_, 
+                                .token_type = lexer_node.BluntSymbol.decr_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -680,9 +626,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     try token_.append(list_of_chars[lookahead]);
                     lookahead += 1;
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.fwd_arr_, 
+                                .token_type = lexer_node.BluntSymbol.fwd_arr_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -692,9 +638,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     };
                 } else {
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.minus_, 
+                                .token_type = lexer_node.BluntSymbol.minus_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -709,9 +655,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                 lookahead = pos + 1;
                 if (list_of_chars[lookahead] == ' '){
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{ 
-                                .token_type = BluntSymbol.wildcard_, 
+                                .token_type = lexer_node.BluntSymbol.wildcard_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -729,7 +675,7 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                         }
                     }
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .identifier_token = .{ 
                                 .token_type = try token_.toOwnedSlice(), 
                                 .position = pos, 
@@ -758,9 +704,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                 try token_.append(list_of_chars[pos]);
                 lookahead = pos + 1;
                 return .{
-                    Token{
+                    lexer_node.Token{
                         .blunt_symbol = .{ 
-                            .token_type = BluntSymbol.dot_, 
+                            .token_type = lexer_node.BluntSymbol.dot_, 
                             .position = pos, 
                             .length = lookahead, 
                             .line_no = newline_count
@@ -776,9 +722,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     try token_.append(list_of_chars[lookahead]);
                     lookahead += 1;
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{
-                                .token_type = BluntSymbol.neq_, 
+                                .token_type = lexer_node.BluntSymbol.neq_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -788,9 +734,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     };
                 } else {
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{
-                                .token_type = BluntSymbol.not_, 
+                                .token_type = lexer_node.BluntSymbol.not_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -803,9 +749,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
             '[' => {
                 lookahead += 1;
                 return .{
-                    Token{
+                    lexer_node.Token{
                         .blunt_symbol = .{
-                            .token_type = BluntSymbol.open_bracket_, 
+                            .token_type = lexer_node.BluntSymbol.open_bracket_, 
                             .position = pos, 
                             .length = lookahead, 
                             .line_no = newline_count
@@ -817,9 +763,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
             ']' => {
                 lookahead += 1;
                 return .{
-                    Token{
+                    lexer_node.Token{
                         .blunt_symbol = .{
-                            .token_type = BluntSymbol.close_bracket_, 
+                            .token_type = lexer_node.BluntSymbol.close_bracket_, 
                             .position = pos, 
                             .length = lookahead, 
                             .line_no = newline_count
@@ -831,9 +777,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
             '(' => {
                 lookahead += 1;
                 return .{
-                    Token{
+                    lexer_node.Token{
                         .blunt_symbol = .{
-                            .token_type = BluntSymbol.open_par_, 
+                            .token_type = lexer_node.BluntSymbol.open_par_, 
                             .position = pos, 
                             .length = lookahead, 
                             .line_no = newline_count
@@ -845,9 +791,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
             ')' => {
                 lookahead += 1;
                 return .{
-                    Token{
+                    lexer_node.Token{
                         .blunt_symbol = .{
-                            .token_type = BluntSymbol.close_par_, 
+                            .token_type = lexer_node.BluntSymbol.close_par_, 
                             .position = pos, 
                             .length = lookahead, 
                             .line_no = newline_count
@@ -859,9 +805,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
             '{' => {
                 lookahead += 1;
                 return .{
-                    Token{
+                    lexer_node.Token{
                         .blunt_symbol = .{
-                            .token_type = BluntSymbol.open_curly_, 
+                            .token_type = lexer_node.BluntSymbol.open_curly_, 
                             .position = pos, 
                             .length = lookahead, 
                             .line_no = newline_count
@@ -873,9 +819,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
             '}' => {
                 lookahead += 1;
                 return .{
-                    Token{
+                    lexer_node.Token{
                         .blunt_symbol = .{
-                            .token_type = BluntSymbol.close_curly_, 
+                            .token_type = lexer_node.BluntSymbol.close_curly_, 
                             .position = pos, 
                             .length = lookahead, 
                             .line_no = newline_count
@@ -897,9 +843,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     try token_.append(list_of_chars[lookahead]);
                     lookahead += 1;
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{
-                                .token_type = BluntSymbol.and_, 
+                                .token_type = lexer_node.BluntSymbol.and_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -909,7 +855,7 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     };
                 } else {
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .unsupported_token = .{
                                 .token_type = list_of_chars[pos], 
                                 .position = pos, 
@@ -928,9 +874,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     try token_.append(list_of_chars[lookahead]);
                     lookahead += 1;
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{
-                                .token_type = BluntSymbol.or_, 
+                                .token_type = lexer_node.BluntSymbol.or_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -942,9 +888,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     try token_.append(list_of_chars[lookahead]);
                     lookahead += 1;
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{
-                                .token_type = BluntSymbol.combine_, 
+                                .token_type = lexer_node.BluntSymbol.combine_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -954,9 +900,9 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
                     };
                 } else {
                     return .{
-                        Token{
+                        lexer_node.Token{
                             .blunt_symbol = .{
-                                .token_type = BluntSymbol.pipe_, 
+                                .token_type = lexer_node.BluntSymbol.pipe_, 
                                 .position = pos, 
                                 .length = lookahead, 
                                 .line_no = newline_count
@@ -969,7 +915,7 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
             else => {
                 lookahead += 1;
                 return .{
-                    Token{
+                    lexer_node.Token{
                         .unsupported_token = .{
                             .token_type = list_of_chars[pos], 
                             .position = pos, 
@@ -985,7 +931,7 @@ inline fn _emitToken(allocator: std.mem.Allocator, pos: usize, list_of_chars: []
 
 
 
-inline fn _getKeywordOrId(allocator: std.mem.Allocator, pos : usize, list_of_chars : []const u8, input_len: usize, newline_count: usize) !struct{?Token, usize, usize} {
+inline fn _getKeywordOrId(allocator: std.mem.Allocator, pos : usize, list_of_chars : []const u8, input_len: usize, newline_count: usize) !struct{?lexer_node.Token, usize, usize} {
     const temp_ = try _finiteAutomaton(allocator, pos, list_of_chars, input_len);
     const token_ = temp_.@"0"; const lookahead = temp_.@"1";
     // std.debug.print("hello world ____ {s}\n", .{token_});
@@ -993,7 +939,7 @@ inline fn _getKeywordOrId(allocator: std.mem.Allocator, pos : usize, list_of_cha
     
     if (keyword != null) {
         return .{
-            Token{
+            lexer_node.Token{
                 .keyword_token = .{
                     .token_type = keyword, 
                     .position = pos, 
@@ -1005,7 +951,7 @@ inline fn _getKeywordOrId(allocator: std.mem.Allocator, pos : usize, list_of_cha
         };
     } else {
         return .{
-            Token{
+            lexer_node.Token{
                 .identifier_token = .{
                     .token_type = token_, 
                     .position = pos, 
@@ -1036,7 +982,7 @@ inline fn _finiteAutomaton(allocator: std.mem.Allocator, pos: usize, list_of_cha
     return .{ try token_.toOwnedSlice(), lookahead };
 }
 
-fn getDstringLit(allocator: std.mem.Allocator, pos : usize, list_of_chars : []const u8, input_len: usize, newline_count: usize) !struct{?Token, usize, usize}{
+fn getDstringLit(allocator: std.mem.Allocator, pos : usize, list_of_chars : []const u8, input_len: usize, newline_count: usize) !struct{?lexer_node.Token, usize, usize}{
     var token_ = std.ArrayList(u8).init(allocator);
     defer token_.deinit();
     try token_.append('\"');
@@ -1047,7 +993,7 @@ fn getDstringLit(allocator: std.mem.Allocator, pos : usize, list_of_chars : []co
             try token_.append(list_of_chars[lookahead]);
             lookahead += 1;
             return .{
-                Token{
+                lexer_node.Token{
                     .str_lit_double =.{
                         .token_type = try token_.toOwnedSlice(), 
                         .position = pos, 
@@ -1066,7 +1012,7 @@ fn getDstringLit(allocator: std.mem.Allocator, pos : usize, list_of_chars : []co
             lookahead += 1;
             if (_contains(list_of_chars[lookahead], &temp_)) {
                 return .{
-                    Token{
+                    lexer_node.Token{
                         .unsupported_token = .{
                             .token_type = list_of_chars[pos], 
                             .position = pos, 
@@ -1085,7 +1031,7 @@ fn getDstringLit(allocator: std.mem.Allocator, pos : usize, list_of_chars : []co
         }
     }
     return .{
-        Token{
+        lexer_node.Token{
             .unsupported_token = .{
                 .token_type = list_of_chars[pos], 
                 .position = pos, 

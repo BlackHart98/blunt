@@ -1,4 +1,4 @@
-const lexer = @import("lexer.zig");
+const lexer = @import("../lexer/definitions.zig");
 const std = @import("std");
 
 //------------------------------------------------------------------------------

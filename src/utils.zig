@@ -1,5 +1,15 @@
 const std = @import("std");
 
+pub const ParseError = error{ ParseError, OutOfMemory, UnsupportedToken, InternalError };
+pub const TokenCategory = enum { sstr, str, id, num, cmt };
+pub fn ParseResult(comptime T: type) type {
+    return ParseError!struct {
+        node: T,
+        end: usize,
+    };
+}
+
+
 // Datatypes
 pub fn Result(comptime T:type, comptime U:type) type {
     return union(enum){
@@ -78,3 +88,5 @@ pub fn Stack(comptime T:type, comptime capacity: usize) type {
         }
     };
 }
+
+
