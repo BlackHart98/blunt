@@ -7,7 +7,7 @@ const std = @import("std");
 
 /// Top-level program structure
 pub const CompilationUnit = struct {
-    decls: ?[] Declaration,
+    decls: ?[]Declaration,
     position: usize,
     offset: usize,
     line_no: usize,
@@ -15,13 +15,36 @@ pub const CompilationUnit = struct {
 
 
 pub const Declaration = union(enum) {
-    const_decl: ConstDeclaration,
-    // meta_decl: MetaDeclaration
+    decl: ConstOrVarDecl,
+    import_decl: ImportVal,
+    // meta_decl: MetaDeclaration,
 };
 
 
-pub const ConstDeclaration = struct {
+pub const ConstOrVarDecl = struct {
     identifier: lexer.Token,
+    value: Value,
+    position: usize,
+    offset: usize,
+    line_no: usize,
+};
+
+
+pub const ImportDeclaration = struct {
+    import_val: ImportVal,
+    position: usize,
+    offset: usize,
+    line_no: usize,
+};
+
+
+pub const Value = union(enum){
+    const_val: ConstValue,
+    var_val: VarValue
+};
+
+
+pub const ConstValue = struct {
     type_: ?Type,
     rval: ExprOrBlock, 
     position: usize,
@@ -30,10 +53,17 @@ pub const ConstDeclaration = struct {
 };
 
 
-pub const VarDeclaration = struct {
-    identifier: lexer.Token,
+pub const VarValue = struct {
     type_: ?Type,
     rval: ExprOrBlock, 
+    position: usize,
+    offset: usize,
+    line_no: usize,
+};
+
+
+pub const ImportVal = struct {
+    module: lexer.Token, 
     position: usize,
     offset: usize,
     line_no: usize,
@@ -43,7 +73,7 @@ pub const VarDeclaration = struct {
 pub const ExprOrBlock = union(enum) {
     expr: Expr,
     bloc: Block,
-    import: Import,
+    import: ImportVal,
     proc_sig: ProcSignature,
 };
 
@@ -62,12 +92,6 @@ pub const Import = struct {
 /// Basic type definition
 pub const Type = union(enum) {
     primitive_type: PrimitiveType,
-    // proc_type: ProcType,
-    // list_type: ListType,
-    // map_type: MapType,
-    // set_type: SetType,
-    // rel_type: RelType,
-    // lrel_type: LrelType,
 };
 
 
@@ -127,13 +151,8 @@ pub const ProcSignature = struct {
 
 /// Available statement types
 pub const Statement = union(enum) {
-    // function_def: FunctionDef,
-    const_decl: ConstDeclaration,
-    var_decl: VarDeclaration,
+    const_or_decl: ConstOrVarDecl,
     assign_stmt : AssignmentStmt,
-    // for_stmt: ForStmt,
-    // if_stmt: IfStmt,
-    // function_call: FunctionCall,
 };
 
 pub const AssignmentStmt = union(enum) {

@@ -26,9 +26,8 @@ fn parseDispatch(comptime T: type, allocator: std.mem.Allocator, input: []const 
     return switch (T) {
         ast.CompilationUnit  => parseCompilationUnit(allocator, input, loc),
         ast.Declaration      => parseDeclaration(allocator, input, loc),
-        ast.ConstDeclaration => parseConstDeclaration(allocator, input, loc),
-        ast.VarDeclaration   => parseVarDeclaration(allocator, input, loc),
-        ast.Import           => parseImport(allocator, input, loc),
+        ast.ConstOrVarDecl   => parseConstOrVarDecl(allocator, input, loc),
+        ast.ImportVal        => parseImportVal(allocator, input, loc),
         ast.ExprOrBlock      => parseExprOrBlock(allocator, input, loc),
         ast.Expr             => parseExpr(allocator, input, loc),
         ast.Block            => parseBlock(allocator, input, loc, null),
@@ -70,95 +69,77 @@ fn parseDeclaration(allocator: std.mem.Allocator, input: []const u8, loc: lexer.
     switch (peek) {
         .keyword_token => |k| switch (k.token_type.?) {
             .import_ => {
-                const node, const new_loc = try parseImport(allocator, input, loc);
-                _ = node;
-                _ = new_loc;
-                @panic("Declaration.import_decl variant not yet in AST");
+                const node, const new_loc = try parseImportVal(allocator, input, loc);
+                const loc_2 = try expectSymbol(input, new_loc, .semi_colon_);
+                return .{ ast.Declaration{ .import_decl = node }, loc_2 };
             },
             else => return ParseError.UnexpectedToken,
         },
         .identifier_token => |_| {
-            const node, const new_loc = try parseConstDeclaration(allocator, input, loc);
-            return .{ ast.Declaration{ .const_decl = node }, new_loc };
+            const node, const new_loc = try parseConstOrVarDecl(allocator, input, loc);
+            return .{ ast.Declaration{ .decl = node }, new_loc };
         },
         else => return ParseError.UnexpectedToken,
     }
 }
 
 
-fn parseConstDeclaration(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.ConstDeclaration, lexer.Position } {
+fn parseConstOrVarDecl(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.ConstOrVarDecl, lexer.Position } {
     const id_tok, const loc1 = try expectIdentifier(input, loc);
     var type_: ?ast.Type = null;
     var loc2 = loc1;
+    var is_const: bool = false;
     if (peekToken(input, loc1)) |peek| {
         switch (peek) {
             .blunt_symbol => |s| if (s.token_type == .colon_) {
                 const loc_after_colon = try expectSymbol(input, loc2, .colon_);
                 const loc_next_colon = expectSymbol(input, loc_after_colon, .colon_) catch null;
-                if (loc_next_colon) |_| {
-                    loc2 = loc_after_colon;
+                if (loc_next_colon) |item| {
+                    loc2 = item; is_const = true;
                 } else {
-                    const t, const loc_after_type = try parseType(allocator, input, loc_after_colon);
-                    loc2 = loc_after_type;
-                    type_ = t;
+                    const loc_bind = expectSymbol(input, loc_after_colon, .bind_) catch null;
+                    if (loc_bind) |item| { loc2 = item; }
+                    else {
+                        const t, const loc_after_type = try parseType(allocator, input, loc_after_colon);
+                        loc2 = loc_after_type;
+                        type_ = t;
+                    }
                 }
             },
             else => {},
         }
     }
-    const loc3 = try expectSymbol(input, loc2, .colon_);
-    const rval, const loc4 = try parseExprOrBlock(allocator, input, loc3);
-    return .{
-        ast.ConstDeclaration{
-            .identifier = id_tok,
+    var value: ?ast.Value = null;
+    var loc4: ?lexer.Position = null;
+    if (is_const) {
+        const rval, loc4 = try parseExprOrBlock(allocator, input, loc2);
+        value = .{ .const_val = ast.ConstValue{
             .type_      = type_,
             .rval       = rval,
-            .position   = loc.idx,
-            .offset     = loc4.idx,
-            .line_no    = loc.line_no,
-        },
-        loc4,
-    };
-}
-
-
-fn parseVarDeclaration(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.VarDeclaration, lexer.Position } {
-    const loc1 = try expectKeyword(input, loc, .var_);
-    const id_tok, const loc2 = try expectIdentifier(input, loc1);
-
-    // optional type annotation
-    var type_: ?ast.Type = null;
-    var loc3 = loc2;
-    if (peekToken(input, loc2)) |peek| {
-        switch (peek) {
-            .blunt_symbol => |s| if (s.token_type == .colon_) {
-                const loc_after_colon = try expectSymbol(input, loc2, .colon_);
-                const t, const loc_after_type = try parseType(allocator, input, loc_after_colon);
-                type_ = t;
-                loc3 = loc_after_type;
-            },
-            else => {},
-        }
+            .position   = loc1.idx,
+            .offset     = loc4.?.idx,
+            .line_no    = loc1.line_no, }};
+    } else {
+        const rval, loc4 = try parseExprOrBlock(allocator, input, loc2);
+        value = .{ .var_val = ast.VarValue{
+            .type_      = type_,
+            .rval       = rval,
+            .position   = loc1.idx,
+            .offset     = loc4.?.idx,
+            .line_no    = loc1.line_no, }};
     }
-
-    const loc4 = try expectSymbol(input, loc3, .bind_);
-    const rval, const loc5 = try parseExprOrBlock(allocator, input, loc4);
-
     return .{
-        ast.VarDeclaration{
+        ast.ConstOrVarDecl{
             .identifier = id_tok,
-            .type_      = type_,
-            .rval       = rval,
+            .value      = value.?,
             .position   = loc.idx,
-            .offset     = loc5.idx,
-            .line_no    = loc.line_no,
-        },
-        loc5,
-    };
+            .offset     = loc4.?.idx,
+            .line_no    = loc1.line_no,
+        }, loc4.?,};
 }
 
 
-fn parseImport(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.Import, lexer.Position } {
+fn parseImportVal(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.ImportVal, lexer.Position } {
     _ = allocator;
     const loc1 = try expectKeyword(input, loc, .import_);
     const loc2 = try expectSymbol(input, loc1, .open_par_);
@@ -168,7 +149,7 @@ fn parseImport(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Posit
             const tok, const loc3 = try expectStringLiteral(input, loc2);
             const loc4 = try expectSymbol(input, loc3, .close_par_);
             return .{
-                ast.Import{
+                ast.ImportVal{
                     .module     = tok,
                     .position   = loc.idx,
                     .offset     = loc4.idx,
@@ -192,7 +173,7 @@ fn parseExprOrBlock(allocator: std.mem.Allocator, input: []const u8, loc: lexer.
         },
         .keyword_token => |k| switch (k.token_type.?) {
             .import_ => {
-                const node, const new_loc = try parseImport(allocator, input, loc);
+                const node, const new_loc = try parseImportVal(allocator, input, loc);
                 const loc_2 = try expectSymbol(input, new_loc, .semi_colon_);
                 return .{ ast.ExprOrBlock{ .import = node }, loc_2 };
             },
@@ -208,7 +189,11 @@ fn parseExprOrBlock(allocator: std.mem.Allocator, input: []const u8, loc: lexer.
             },
             else => return ParseError.UnexpectedToken,
         },
-        else => return ParseError.ExpectedType,
+        else => {
+            const node, const new_loc = try parseExpr(allocator, input, loc);
+            const loc_2 = try expectSymbol(input, new_loc, .semi_colon_);
+            return .{ ast.ExprOrBlock{ .expr = node }, loc_2 };
+        },
     }
     return ParseError.ExpectedType;
 }
@@ -341,12 +326,9 @@ fn parsePrimitiveType(allocator: std.mem.Allocator, input: []const u8, loc: lexe
 fn parseStatement(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.Statement, lexer.Position } {
     const peek = peekToken(input, loc) orelse return ParseError.UnexpectedEof;
     switch (peek) {
-        .keyword_token => |k| switch (k.token_type.?) {
-            .var_ => {
-                const node, const new_loc = try parseVarDeclaration(allocator, input, loc);
-                return .{ ast.Statement{ .var_decl = node }, new_loc };
-            },
-            else => return ParseError.UnexpectedToken,
+        .identifier_token => |_| {
+            const node, const new_loc = try parseConstOrVarDecl(allocator, input, loc);
+            return .{ ast.Statement{ .const_or_decl = node }, new_loc };
         },
         else => return ParseError.UnexpectedToken,
     }
