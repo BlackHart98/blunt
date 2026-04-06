@@ -1,6 +1,6 @@
-@import("prelude") as std
+std::import("prelude");
 
 
-fn main(args: str = "testarg") -> void {
-    std.println("hello world .{args}");
+main::proc() -> void {
+    std.println("skibidi toilet!");
 }

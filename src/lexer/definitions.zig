@@ -1,22 +1,6 @@
 const mem = @import("std").mem; 
 const std = @import("std");
 
-pub const Keyword = enum(u8) { 
-    // keywords
-    fn_,        if_,     import_, extend_,   var_,
-    const_,     return_, visit_,   top_down_,  bottom_up_,
-    innermost_, fail_,   insert_,  outermost_, top_down_break_,
-    for_,       elif_,   else_,    external_, sypnosis_,
-    typedef_,   data_,   in_,      true_,      false_,
-    try_,       catch_,  as_,
-
-    // data types
-    any_,       num_,    int_,
-    str_,       real_,   list_,    tuple_,     rel_,
-    lrel_,      map_,    void_,    set_,       node_,
-    loc_,       itr_,
-};
-
 
 pub const BluntSymbol = enum(u8) { 
     // symbols
@@ -31,27 +15,39 @@ pub const BluntSymbol = enum(u8) {
 };
 
 
-
-pub const Token = union(enum) {
-    keyword_token: TokenComptime(?Keyword),
-    identifier_token: TokenComptime([]const u8),
-    coment_single_line: TokenComptime([]const u8),
-    coment_multi_line: TokenComptime([]const u8),
-    esc_identifier_token: TokenComptime([]const u8),
-    str_lit_single: TokenComptime([]const u8),
-    str_lit_double: TokenComptime([]const u8),
-    special_char: TokenComptime([]const u8),
-    blunt_symbol: TokenComptime(BluntSymbol),
-    number: TokenComptime([]const u8),
-    unsupported_token: TokenComptime(u8),
-};
-
-
 pub fn TokenComptime(comptime T : type) type {
     return struct {
         token_type : T,
         position : usize,
-        length : usize,
+        offset : usize,
         line_no : usize,
     };
 }
+
+
+pub const Keyword = enum(u8) { 
+    // keywords
+    proc_,      if_,        import_,    var_,   return_,    for_,   else_,
+    typedef_,   struct_,    enum_,      union_, in_,        true_,  false_,     try_,   
+    catch_,     where_,     defer_,
+
+    // data types
+    any_, num_,  int_, str_,  float_, list_, tuple_, map_, void_, itr_
+};
+
+
+pub const Token = union(enum) {
+    keyword_token: TokenComptime(?Keyword),
+    identifier_token: TokenComptime(void),
+    coment_single_line: TokenComptime([]const u8),
+    coment_multi_line: TokenComptime([]const u8),
+    esc_identifier_token: TokenComptime([]const u8),
+    str_lit_single: TokenComptime([]const u8),
+    str_lit_double: TokenComptime(void),
+    special_char: TokenComptime([]const u8),
+    blunt_symbol: TokenComptime(BluntSymbol),
+    number: TokenComptime(void),
+    unsupported_token: TokenComptime(u8),
+};
+
+pub const Position = struct{idx: usize, line_no: usize};

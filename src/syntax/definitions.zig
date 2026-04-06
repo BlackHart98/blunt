@@ -7,27 +7,51 @@ const std = @import("std");
 
 /// Top-level program structure
 pub const CompilationUnit = struct {
-    import_decls: ?[]*const Import,
-    statements: ?[]*const Statement,
+    decls: ?[] Declaration,
     position: usize,
-    length: usize,
+    offset: usize,
     line_no: usize,
 };
 
-/// Module imports
+
+pub const Declaration = union(enum) {
+    const_decl: ConstDeclaration,
+    // meta_decl: MetaDeclaration
+};
+
+
+pub const ConstDeclaration = struct {
+    identifier: lexer.Token,
+    type_: ?Type,
+    rval: ExprOrBlock, 
+    position: usize,
+    offset: usize,
+    line_no: usize,
+};
+
+
+pub const VarDeclaration = struct {
+    identifier: lexer.Token,
+    type_: ?Type,
+    rval: ExprOrBlock, 
+    position: usize,
+    offset: usize,
+    line_no: usize,
+};
+
+
+pub const ExprOrBlock = union(enum) {
+    expr: Expr,
+    bloc: Block,
+    import: Import,
+    proc_sig: ProcSignature,
+};
+
+
 pub const Import = struct {
-    import: ?*const lexer.Token,
-    alias: ?Alias,
+    module: lexer.Token, 
     position: usize,
-    length: usize,
-    line_no: usize,
-};
-
-/// Import aliases
-pub const Alias = struct {
-    alias: Identifier,
-    position: usize,
-    length: usize,
+    offset: usize,
     line_no: usize,
 };
 
@@ -35,32 +59,21 @@ pub const Alias = struct {
 // Identifiers and Basic Types
 //------------------------------------------------------------------------------
 
-/// Variable/function identifiers
-pub const Identifier = struct {
-    identifier: *const lexer.Token,
-    position: usize,
-    length: usize,
-    line_no: usize,
-};
-
 /// Basic type definition
 pub const Type = union(enum) {
     primitive_type: PrimitiveType,
-    function_type: FunctionType,
-    list_type: ListType,
-    map_type: MapType,
-    set_type: SetType,
-    rel_type: RelType,
-    lrel_type: LrelType,
+    // proc_type: ProcType,
+    // list_type: ListType,
+    // map_type: MapType,
+    // set_type: SetType,
+    // rel_type: RelType,
+    // lrel_type: LrelType,
 };
 
 
 /// Primitive type
 pub const PrimitiveType = struct {
     primitive_type: PrimitiveTypeEnum,
-    position: usize,
-    length: usize,
-    line_no: usize,
 };
 
 
@@ -73,128 +86,59 @@ pub const PrimitiveTypeEnum = enum(u8){
 };
 
 
-/// Function parameter definition
 pub const Parameter = struct {
-    parameter: Identifier,
-    type_: *Type,
+    parameter: lexer.Token,
+    type_: Type,
     position: usize,
-    length: usize,
+    offset: usize,
     line_no: usize,
 };
+
+
+pub const Constraints = struct {
+    constraints: []Expr,
+    type_: Type,
+    position: usize,
+    offset: usize,
+    line_no: usize,
+};
+
 
 //------------------------------------------------------------------------------
-// Complex Types
+// Block
 //------------------------------------------------------------------------------
 
-/// Function type with parameters and return type
-pub const FunctionType = struct {
-    parameter_type_list: []*Type,
-    return_type: *Type,
+pub const Block = struct {
+    sig: ?ProcSignature,
+    stmts: ?[]Statement,
     position: usize,
-    length: usize,
+    offset: usize,
     line_no: usize,
 };
 
-/// Collection Types
-pub const ListType = struct {
-    list_type: *Type,
+pub const ProcSignature = struct {
+    param_list: ?[]Parameter,
+    return_type: ?Type,
+    param_constraints: ?Constraints,
     position: usize,
-    length: usize,
+    offset: usize,
     line_no: usize,
 };
-
-pub const SetType = struct {
-    set_type: *Type,
-    position: usize,
-    length: usize,
-    line_no: usize,
-};
-
-pub const MapType = struct {
-    key_type: *Type,
-    value_type: *Type,
-    position: usize,
-    length: usize,
-    line_no: usize,
-};
-
-/// Relation Types
-pub const RelType = struct {
-    rel_type: []*Type,
-    position: usize,
-    length: usize,
-    line_no: usize,
-};
-
-pub const LrelType = struct {
-    rel_type: []*Type,
-    position: usize,
-    length: usize,
-    line_no: usize,
-};
-
-//------------------------------------------------------------------------------
-// Statements
-//------------------------------------------------------------------------------
 
 /// Available statement types
 pub const Statement = union(enum) {
-    function_def: FunctionDef,
-    declaration_stmt: DeclarationStmt,
-    assignment_stmt : AssignmentStmt,
-    for_stmt: ForStmt,
-    function_call: FunctionCall,
+    // function_def: FunctionDef,
+    const_decl: ConstDeclaration,
+    var_decl: VarDeclaration,
+    assign_stmt : AssignmentStmt,
+    // for_stmt: ForStmt,
+    // if_stmt: IfStmt,
+    // function_call: FunctionCall,
 };
 
-/// Function definition
-pub const FunctionDef = struct {
-    function_id: Identifier,
-    parameters: ?[]*const Parameter,
-    return_type: Type,
-    statements: ?[]*const Statement,
-    position: usize,
-    length: usize,
-    line_no: usize,
-};
-
-/// Variable assignment
-pub const AssignmentStmt = struct {
-    lval: *Expr,
-    rval: ?*Expr,
-    position: usize,
-    length: usize,
-    line_no: usize,
-};
-
-
-/// Variable assignment
-pub const DeclarationStmt = struct {
-    declaration_desc: ?lexer.Keyword,
-    variable: Identifier,
-    type_: *Type,
-    expr: ?*Expr,
-    position: usize,
-    length: usize,
-    line_no: usize,
-};
-
-
-/// Loop statement
-pub const ForStmt = struct {
-    generator: []*Expr,
-    statements: []*Statement,
-    position: usize,
-    length: usize,
-    line_no: usize,
-};
-
-
-/// Return statement
-pub const ReturnStmt = struct {
-    return_expr: *Expr,
-    position: usize,
-    length: usize,
-    line_no: usize,
+pub const AssignmentStmt = union(enum) {
+    lval: Expr,
+    rval: ExprOrBlock,
 };
 
 
@@ -207,8 +151,8 @@ pub const Expr = union(enum) {
     binary_op: BinaryOp,
     unary_op: UnaryOp,
     bracket: *Bracket,
-    identifier: Identifier,
-    function_call: FunctionCall,
+    identifier: lexer.Token,
+    proc_call: ProcCall,
     number_expr: Number,
     string_expr: String,
     sstring_expr: String,
@@ -234,10 +178,10 @@ pub const BinaryOp = struct {
         Match,
         Pipe,
         Combine,},
-    left: *const Expr,
-    right: *const Expr,
+    left: *Expr,
+    right: *Expr,
     position: usize,
-    length: usize,
+    offset: usize,
     line_no: usize,
 };
 
@@ -245,7 +189,7 @@ pub const UnaryOp = struct {
     op: enum(u8) { UMin, UPlus, Not, },
     expr: *Expr,
     position: usize,
-    length: usize,
+    offset: usize,
     line_no: usize,
 };
 
@@ -253,24 +197,18 @@ pub const UnaryOp = struct {
 pub const Bracket = struct {
     expr: *Expr,
     position: usize,
-    length: usize,
+    offset: usize,
     line_no: usize,
 };
 
 // Number
 pub const Number = struct {
-    number: []const u8,
-    position: usize,
-    length: usize,
-    line_no: usize,
+    number: lexer.Token,
 };
 
 // String
 pub const String = struct {
-    string: []const u8,
-    position: usize,
-    length: usize,
-    line_no: usize,
+    string: lexer.Token,
 };
 
 
@@ -280,11 +218,11 @@ pub const String = struct {
 //------------------------------------------------------------------------------
 
 /// Function invocation
-pub const FunctionCall = struct {
+pub const ProcCall = struct {
     function_id: *const Expr,
     args: []*const Expr,
     position: usize,
-    length: usize,
+    offset: usize,
     line_no: usize,
 };
 
@@ -294,6 +232,6 @@ pub const Generator = struct {
     result: *Expr,
     iterator: *Expr,
     position: usize,
-    length: usize,
+    offset: usize,
     line_no: usize,
 };

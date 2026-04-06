@@ -1,319 +1,439 @@
 const std = @import("std");
+const ast = @import("definitions.zig");
 const lexer = @import("../lexer/definitions.zig");
-const ast = @import("../syntax/definitions.zig");
-const utils = @import("../utils.zig");
-const common = @import("common.zig");
-const io = std.debug;
-const expr = @import("expr.zig");
+const tokenizer = @import("../lexer/lexer.zig");
 
 
-// Still trying to wrap my head around Zig
-pub fn parseCompilationUnit(allocator: std.mem.Allocator, tokens: ?[]const lexer.Token) utils.ParseResult(ast.CompilationUnit) {
-    var importList = std.ArrayList(*const ast.Import).init(allocator);
-    errdefer importList.deinit();
-    var statementList = std.ArrayList(*const ast.Statement).init(allocator);
-    errdefer statementList.deinit();
-    const N = tokens.?.len;
-    var i: usize = 0;
-    while (i < N) : (i += 1) {
-        if (common._expect(lexer.Keyword, tokens.?[i], .import_)) {
-            while (i < N and common._expect(lexer.Keyword, tokens.?[i], .import_)) {
-                const import = try allocator.create(ast.Import);
-                errdefer allocator.destroy(import);
-                const temp_ = try parseImport(tokens, i);
-                import.* = temp_.node;
-                try importList.append(import);
-                i = temp_.end - 1;
-            }
-        } else {
-            const statement = try allocator.create(ast.Statement);
-            errdefer allocator.destroy(statement);
-            const temp_ = try parseStatement(allocator, tokens, i);
-            statement.* = temp_.node;
-            try statementList.append(statement);
-            i = temp_.end - 1;
-        }
-    }
-    var imports: ?[]*const ast.Import = null;
-    var statements: ?[]*const ast.Statement = null;
+const ParseError = error{
+    UnexpectedToken,
+    UnexpectedEof,
+    ExpectedIdentifier,
+    ExpectedKeyword,
+    ExpectedSymbol,
+    ExpectedType,
+};
 
-    if (importList.items.len > 0) {
-        imports = try importList.toOwnedSlice();
-    }
-    if (statementList.items.len > 0) {
-        statements = try statementList.toOwnedSlice();
-    }
-    return .{ .node = ast.CompilationUnit{
-        .import_decls = imports,
-        .statements = statements,
-        .position = 0,
-        .length = 0,
-        .line_no = 1,
-    }, .end = i };
+
+pub fn parse(comptime T: type, allocator: std.mem.Allocator, input: []const u8) !T {
+    const loc: lexer.Position = .{ .idx = 0, .line_no = 0 };
+    const result, _ = try parseDispatch(T, allocator, input, loc);
+    return result;
 }
 
-pub fn parseImport(tokens: ?[]const lexer.Token, index: usize) utils.ParseResult(ast.Import) {
-    var i: usize = index + 1;
-    const N = tokens.?.len;
-    var importNode: ast.Import = ast.Import{
-        .import = null,
-        .alias = null,
-        .position = 0,
-        .length = 0,
-        .line_no = 0,
+
+// internal entry — exposes loc threading to recursive callers
+fn parseDispatch(comptime T: type, allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { T, lexer.Position } {
+    return switch (T) {
+        ast.CompilationUnit  => parseCompilationUnit(allocator, input, loc),
+        ast.Declaration      => parseDeclaration(allocator, input, loc),
+        ast.ConstDeclaration => parseConstDeclaration(allocator, input, loc),
+        ast.VarDeclaration   => parseVarDeclaration(allocator, input, loc),
+        ast.Import           => parseImport(allocator, input, loc),
+        ast.ExprOrBlock      => parseExprOrBlock(allocator, input, loc),
+        ast.Expr             => parseExpr(allocator, input, loc),
+        ast.Block            => parseBlock(allocator, input, loc, null),
+        ast.ProcSignature    => parseProcSignature(allocator, input, loc),
+        ast.Type             => parseType(allocator, input, loc),
+        ast.PrimitiveType    => parsePrimitiveType(allocator, input, loc),
+        ast.Statement        => parseStatement(allocator, input, loc),
+        ast.AssignmentStmt   => parseAssignmentStmt(allocator, input, loc),
+        ast.ProcCall         => parseProcCall(allocator, input, loc),
+        ast.BinaryOp         => parseBinaryOp(allocator, input, loc),
+        ast.UnaryOp          => parseUnaryOp(allocator, input, loc),
+        else => @compileError("no parser registered for type: " ++ @typeName(T)),
     };
-    var aliasNode: ast.Alias = undefined;
-    var module: *const lexer.Token = undefined;
-    if (i >= N) {
-        return utils.ParseError.ParseError;
-    }
-    if (common._expect(lexer.BluntSymbol, tokens.?[i], .open_par_)) {
-        i += 1;
-    }
-    if (i >= N) {
-        return utils.ParseError.ParseError;
-    }
-    if (common._expect(utils.TokenCategory, tokens.?[i], .str)) {
-        module = &tokens.?[i];
-        i += 1;
-    }
-    if (i >= N) {
-        return utils.ParseError.ParseError;
-    }
-    if (common._expect(lexer.BluntSymbol, tokens.?[i], .close_par_)) {
-        i += 1;
-    }
-    if (i >= N) {
-        return utils.ParseError.ParseError;
-    }
-    if (common._expect(lexer.Keyword, tokens.?[i], .as_)) {
-        i += 1;
-    }
-    if (i >= N) {
-        return utils.ParseError.ParseError;
-    }
-    if (common._expect(utils.TokenCategory, tokens.?[i], .id)) {
-        const temp_ = try parseAlias(tokens, i);
-        aliasNode = temp_.node;
-        i = temp_.end;
-        importNode = ast.Import{
-            .import = module,
-            .alias = aliasNode,
-            .position = temp_.node.position,
-            .length = temp_.node.length,
-            .line_no = temp_.node.line_no,
-        };
-        return .{ .node = importNode, .end = i };
-    }
-    return utils.ParseError.ParseError;
 }
 
-pub fn parseStatement(
-    allocator: std.mem.Allocator, 
-    tokens: ?[]const lexer.Token, 
-    index: usize
-) utils.ParseResult(ast.Statement) {
-    if (common._expect(lexer.Keyword, tokens.?[index], .fn_)) {
-        return try parseFunctionDef(allocator, tokens, index);
-    } else if (common._expect(lexer.Keyword, tokens.?[index], .const_) or common._expect(lexer.Keyword, tokens.?[index], .var_)) {
-        const declaration_desc = tokens.?[index].keyword_token.token_type;
-        return try parseDeclarationStmt(declaration_desc, allocator, tokens, index);
-    } else if (common._expect(lexer.Keyword, tokens.?[index], .if_)) {
-        io.print("if statement\n", .{});
-        return utils.ParseError.ParseError;
-    } else if (common._expect(lexer.Keyword, tokens.?[index], .return_)) {
-        io.print("return statement\n", .{});
-        return utils.ParseError.ParseError;
-    } else if (common._expect(lexer.Keyword, tokens.?[index], .for_)) {
-        io.print("for statement\n", .{});
-        return utils.ParseError.ParseError;
-    }else {
-        return utils.ParseError.ParseError;
+
+fn parseCompilationUnit(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct{ ast.CompilationUnit, lexer.Position } {
+    var decls: std.ArrayList(ast.Declaration) = .empty;
+    var cur = loc;
+    while (peekToken(input, cur) != null) {
+        const decl, const new_loc = try parseDeclaration(allocator, input, cur);
+        try decls.append(allocator, decl);
+        cur = new_loc;
+    }
+    return .{
+        ast.CompilationUnit{
+            .decls    = decls.items,
+            .position = loc.idx,
+            .offset   = cur.idx,
+            .line_no  = loc.line_no,
+        },
+        cur,
+    };
+}
+
+
+fn parseDeclaration(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct{ ast.Declaration, lexer.Position } {
+    const peek = peekToken(input, loc) orelse return ParseError.UnexpectedEof;
+    switch (peek) {
+        .keyword_token => |k| switch (k.token_type.?) {
+            .import_ => {
+                const node, const new_loc = try parseImport(allocator, input, loc);
+                _ = node;
+                _ = new_loc;
+                @panic("Declaration.import_decl variant not yet in AST");
+            },
+            else => return ParseError.UnexpectedToken,
+        },
+        .identifier_token => |_| {
+            const node, const new_loc = try parseConstDeclaration(allocator, input, loc);
+            return .{ ast.Declaration{ .const_decl = node }, new_loc };
+        },
+        else => return ParseError.UnexpectedToken,
     }
 }
 
-pub inline fn parseAlias(tokens: ?[]const lexer.Token, index: usize) utils.ParseResult(ast.Alias) {
-    if (common._expect(utils.TokenCategory, tokens.?[index], .id)) {
-        const temp_ = try expr.parseIdentifier(tokens, index);
-        return .{ .node = ast.Alias{
-            .alias = temp_.node,
-            .position = temp_.node.position,
-            .length = temp_.node.length,
-            .line_no = temp_.node.line_no,
-        }, .end = temp_.end };
-    }
-    return utils.ParseError.ParseError;
-}
 
-// pub fn parseIdentifier(tokens: ?[]const lexer.Token, index: usize) utils.ParseResult(ast.Identifier) {
-//     if (common._expect(utils.TokenCategory, tokens.?[index], .id)) {
-//         return .{ .node = ast.Identifier{
-//             .identifier = &tokens.?[index],
-//             .position = tokens.?[index].identifier_token.position,
-//             .length = tokens.?[index].identifier_token.length,
-//             .line_no = tokens.?[index].identifier_token.line_no,
-//         }, .end = index + 1 };
-//     } else {
-//         return utils.ParseError.ParseError;
-//     }
-// }
-
-pub fn parseFunctionDef(
-    allocator: std.mem.Allocator, 
-    tokens: ?[]const lexer.Token, 
-    index: usize
-) utils.ParseResult(ast.Statement) {
-    var i: usize = index + 1;
-    const N = tokens.?.len;
-    var parameterList = std.ArrayList(*const ast.Parameter).init(allocator);
-    errdefer parameterList.deinit();
-    var statementList = std.ArrayList(*const ast.Statement).init(allocator);
-    errdefer statementList.deinit();
-    const identifier = try expr.parseIdentifier(tokens, i);
-    i = identifier.end;
-    if (i >= N) {
-        return utils.ParseError.ParseError;
-    }
-    if (common._expect(lexer.BluntSymbol, tokens.?[i], .open_par_)) {
-        i += 1;
-        var j: usize = i;
-        while (j < N) : (j += 1) {
-            if (common._expect(lexer.BluntSymbol, tokens.?[j], .close_par_)) {
-                j += 1;
-                break;
-            } else {
-                const parameter = try allocator.create(ast.Parameter);
-                errdefer allocator.destroy(parameter);
-                const temp_ = try expr.parseParameter(allocator, tokens, j);
-                parameter.* = temp_.node;
-                try parameterList.append(parameter);
-                j = temp_.end - 1;
-            }
-        }
-        i = j;
-    }
-    if (i >= N) {
-        return utils.ParseError.ParseError;
-    }
-    if (common._expect(lexer.BluntSymbol, tokens.?[i], .fwd_arr_)) {
-        i += 1;
-    }
-    if (i >= N) {
-        return utils.ParseError.ParseError;
-    }
-
-    const type_symbol = expr.parseType(allocator, tokens, i)
-        catch |err| {
-            std.debug.print("Got out! .... error\n", .{});
-            return err;
-        };
-    i = type_symbol.end;
-    // std.debug.print("Got out, You're broke, Mr. {?}\n", .{tokens.?[i]});
-
-    if (common._expect(lexer.BluntSymbol, tokens.?[i], .open_curly_)) {
-        i += 1;
-        var j: usize = i;
-        while (j < N) : (j += 1) {
-            if (common._expect(lexer.BluntSymbol, tokens.?[j], .close_curly_)) {
-                const function_statement = try allocator.create(ast.Statement);
-                errdefer allocator.destroy(function_statement);
-                function_statement.* = ast.Statement{ .function_def = .{
-                    .function_id = identifier.node,
-                    .parameters = null,
-                    .return_type = type_symbol.node,
-                    .statements = try statementList.toOwnedSlice(),
-                    .position = tokens.?[j].blunt_symbol.position,
-                    .length = tokens.?[j].blunt_symbol.length,
-                    .line_no = tokens.?[j].blunt_symbol.line_no,
-                } };
-                return .{ .node = function_statement.*, .end = j + 1 };
-            } else {
-                const statement = try allocator.create(ast.Statement);
-                errdefer allocator.destroy(statement);
-                const temp_ = try parseStatement(allocator, tokens, j);
-                statement.* = temp_.node;
-                try statementList.append(statement);
-                j = temp_.end - 1;
-            }
-        }
-        i = j;
-        return utils.ParseError.ParseError;
-    } else {
-        return utils.ParseError.ParseError;
-    }
-}
-
-pub inline fn parseDeclarationStmt(
-    declaration_desc: ?lexer.Keyword, 
-    allocator: std.mem.Allocator, 
-    tokens: ?[]const lexer.Token, 
-    index: usize
-) utils.ParseResult(ast.Statement) {
-    var i: usize = index + 1;
-    if (common._expect(utils.TokenCategory, tokens.?[i], .id)) {
-        const variable_result = try expr.parseIdentifier(tokens, i);
-        i += 1;
-        if (!common._expect(lexer.BluntSymbol, tokens.?[i], .colon_)){
-            return utils.ParseError.ParseError;
-        }
-        i += 1;
-        const type_result = try expr.parseType(allocator, tokens, i);
-        const type_annotation = try allocator.create(ast.Type);
-        errdefer allocator.destroy(type_annotation);
-        i = type_result.end;
-
-        if (common._expect(lexer.BluntSymbol, tokens.?[i], .bind_)){
-            const declaration_statement = try allocator.create(ast.Statement);
-            errdefer allocator.destroy(declaration_statement);
-            type_annotation.* = type_result.node;
-            const expression = try allocator.create(ast.Expr);
-            errdefer allocator.destroy(expression);
-            i += 1;
-            
-            const expr_node = try expr.parseExpr(allocator, tokens, i);
-            expression.* = expr_node.node;
-            if (common._expect(lexer.BluntSymbol, tokens.?[expr_node.end], .semi_colon_)){
-                io.print("expression seemed to parse correctly! `{?}`\n", .{expr_node.node});
-            }
-            io.print("exited function parsing.\n", .{});
-            declaration_statement.* = ast.Statement{
-                .declaration_stmt = .{
-                    .declaration_desc = declaration_desc,
-                    .variable = variable_result.node,
-                    .type_ =  type_annotation,
-                    .expr = expression,
-                    .position = index,
-                    .length = i,
-                    .line_no = tokens.?[index].keyword_token.line_no,
-
+fn parseConstDeclaration(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.ConstDeclaration, lexer.Position } {
+    const id_tok, const loc1 = try expectIdentifier(input, loc);
+    var type_: ?ast.Type = null;
+    var loc2 = loc1;
+    if (peekToken(input, loc1)) |peek| {
+        switch (peek) {
+            .blunt_symbol => |s| if (s.token_type == .colon_) {
+                const loc_after_colon = try expectSymbol(input, loc2, .colon_);
+                const loc_next_colon = expectSymbol(input, loc_after_colon, .colon_) catch null;
+                if (loc_next_colon) |_| {
+                    loc2 = loc_after_colon;
+                } else {
+                    const t, const loc_after_type = try parseType(allocator, input, loc_after_colon);
+                    loc2 = loc_after_type;
+                    type_ = t;
                 }
-            };
-            return .{ .node = declaration_statement.*, .end = expr_node.end + 1 };
-        } else {
-            const declaration_statement = try allocator.create(ast.Statement);
-            errdefer allocator.destroy(declaration_statement);
-            type_annotation.* = type_result.node;
-            i = type_result.end;
-            if (!common._expect(lexer.BluntSymbol, tokens.?[i], .semi_colon_)){
-                return utils.ParseError.ParseError;
-            }
-
-            declaration_statement.* = ast.Statement{
-                .declaration_stmt = .{
-                    .declaration_desc = declaration_desc,
-                    .variable = variable_result.node,
-                    .type_ =  type_annotation,
-                    .expr = null,
-                    .position = index,
-                    .length = i,
-                    .line_no = tokens.?[index].keyword_token.line_no,
-
-                }
-            };
-            // std.debug.print("my mind is fatigued, {any} ..........\n", .{declaration_statement});
-            return .{ .node = declaration_statement.*, .end = i + 1 };
+            },
+            else => {},
         }
     }
-    return utils.ParseError.ParseError;
+    const loc3 = try expectSymbol(input, loc2, .colon_);
+    const rval, const loc4 = try parseExprOrBlock(allocator, input, loc3);
+    return .{
+        ast.ConstDeclaration{
+            .identifier = id_tok,
+            .type_      = type_,
+            .rval       = rval,
+            .position   = loc.idx,
+            .offset     = loc4.idx,
+            .line_no    = loc.line_no,
+        },
+        loc4,
+    };
 }
 
+
+fn parseVarDeclaration(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.VarDeclaration, lexer.Position } {
+    const loc1 = try expectKeyword(input, loc, .var_);
+    const id_tok, const loc2 = try expectIdentifier(input, loc1);
+
+    // optional type annotation
+    var type_: ?ast.Type = null;
+    var loc3 = loc2;
+    if (peekToken(input, loc2)) |peek| {
+        switch (peek) {
+            .blunt_symbol => |s| if (s.token_type == .colon_) {
+                const loc_after_colon = try expectSymbol(input, loc2, .colon_);
+                const t, const loc_after_type = try parseType(allocator, input, loc_after_colon);
+                type_ = t;
+                loc3 = loc_after_type;
+            },
+            else => {},
+        }
+    }
+
+    const loc4 = try expectSymbol(input, loc3, .bind_);
+    const rval, const loc5 = try parseExprOrBlock(allocator, input, loc4);
+
+    return .{
+        ast.VarDeclaration{
+            .identifier = id_tok,
+            .type_      = type_,
+            .rval       = rval,
+            .position   = loc.idx,
+            .offset     = loc5.idx,
+            .line_no    = loc.line_no,
+        },
+        loc5,
+    };
+}
+
+
+fn parseImport(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.Import, lexer.Position } {
+    _ = allocator;
+    const loc1 = try expectKeyword(input, loc, .import_);
+    const loc2 = try expectSymbol(input, loc1, .open_par_);
+    const peek = peekToken(input, loc2) orelse return ParseError.UnexpectedEof;
+    switch (peek) {
+        .str_lit_double => {
+            const tok, const loc3 = try expectStringLiteral(input, loc2);
+            const loc4 = try expectSymbol(input, loc3, .close_par_);
+            return .{
+                ast.Import{
+                    .module     = tok,
+                    .position   = loc.idx,
+                    .offset     = loc4.idx,
+                    .line_no    = loc.line_no,
+                },
+                loc4,
+            };
+        },
+        else => {},
+    }
+    return ParseError.ExpectedType;
+}
+
+
+fn parseExprOrBlock(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) anyerror!struct { ast.ExprOrBlock, lexer.Position } {
+    const peek = peekToken(input, loc) orelse return ParseError.UnexpectedEof;
+    switch (peek) {
+        .blunt_symbol => |s| if (s.token_type == .open_curly_) {
+            const block, const new_loc = try parseBlock(allocator, input, loc, null);
+            return .{ ast.ExprOrBlock{ .bloc = block }, new_loc };
+        },
+        .keyword_token => |k| switch (k.token_type.?) {
+            .import_ => {
+                const node, const new_loc = try parseImport(allocator, input, loc);
+                const loc_2 = try expectSymbol(input, new_loc, .semi_colon_);
+                return .{ ast.ExprOrBlock{ .import = node }, loc_2 };
+            },
+            .proc_ => {
+                const node, const loc_1 = try parseProcSignature(allocator, input, loc);
+                const loc_after_semicolon = expectSymbol(input, loc_1, .semi_colon_) catch null;
+                if (loc_after_semicolon) |item| {
+                    return .{ ast.ExprOrBlock{ .proc_sig = node }, item };
+                } else {
+                    const block, const loc_2 = try parseBlock(allocator, input, loc_1, node);
+                    return .{ ast.ExprOrBlock{ .bloc = block }, loc_2 };
+                }
+            },
+            else => return ParseError.UnexpectedToken,
+        },
+        else => return ParseError.ExpectedType,
+    }
+    return ParseError.ExpectedType;
+}
+
+
+fn parseExpr(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.Expr, lexer.Position } {
+    _ = allocator;
+    // base case: identifier or number literal — binary ops need Pratt on top of this
+    const tok, const new_loc = try expectToken(input, loc);
+    switch (tok) {
+        .identifier_token => return .{ ast.Expr{ .identifier = tok }, new_loc },
+        .number           => return .{ ast.Expr{ .number_expr = .{ .number = tok } }, new_loc },
+        .str_lit_double,
+        .str_lit_single   => return .{ ast.Expr{ .string_expr = .{ .string = tok } }, new_loc },
+        else              => return ParseError.UnexpectedToken,
+    }
+}
+
+
+fn parseBlock(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position, proc_sig: ?ast.ProcSignature) !struct { ast.Block, lexer.Position } {
+    var stmt_list: ?[]ast.Statement = null;
+    const peek = peekToken(input, loc) orelse return ParseError.UnexpectedEof;
+    var cur = try expectSymbol(input, loc, .open_curly_);
+    switch (peek) {
+        .blunt_symbol => |s| if (s.token_type == .open_curly_) {
+            var stmts: std.ArrayList(ast.Statement) = .empty;
+            while (peekToken(input, cur) != null) {
+                const loc_curly = expectSymbol(input, cur, .close_curly_) catch null;
+                if (loc_curly) |item| {
+                    cur = item;
+                    break;
+                } 
+                const stmt, const new_loc = try parseStatement(allocator, input, cur);
+                try stmts.append(allocator, stmt);
+                cur = new_loc;
+            }
+            if (0 == stmts.items.len) stmt_list = stmts.items;
+        },
+        else => {},
+    }
+    return .{
+        ast.Block{
+            .sig      = proc_sig,
+            .stmts    = stmt_list,
+            .position = loc.idx,
+            .offset   = cur.idx,
+            .line_no  = loc.line_no,
+        },
+        cur,
+    };
+}
+
+
+fn parseProcSignature(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.ProcSignature, lexer.Position } {
+    var params: std.ArrayList(ast.Parameter) = .empty;
+    var cur = try expectKeyword(input, loc, .proc_);
+    cur = try expectSymbol(input, cur, .open_par_);
+    
+    while (peekToken(input, cur) != null) {
+        const loc_1 = expectSymbol(input, cur, .close_par_) catch null;
+        if (loc_1) |item| {cur = item; break;}
+        const param, const new_loc = try parseParameter(allocator, input, cur);
+        try params.append(allocator, param);
+        cur = new_loc;
+    }
+    var type_tok: ?ast.Type = null;
+    const loc_after_arrow = expectSymbol(input, cur, .fwd_arr_) catch null;
+    if (loc_after_arrow) |item| {
+        type_tok, cur = try parseType(allocator, input, item);
+    }
+    var constraint: ?ast.Constraints = null;
+    const loc_after_where = expectKeyword(input, cur, .where_) catch null;
+    if (loc_after_where) |item| {
+        constraint, cur = try parseConstraints(allocator, input, item);
+    }
+    return .{
+        ast.ProcSignature{
+            .param_list         = params.items,
+            .return_type        = type_tok,
+            .param_constraints  = constraint,
+            .position           = loc.idx,
+            .offset             = cur.idx,
+            .line_no            = loc.line_no,
+        },
+        cur,
+    };
+}
+
+
+fn parseParameter(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.Parameter, lexer.Position } {
+    _ = allocator; _ = input; _ = loc;
+    @panic("parseParameter: not implemented");
+}
+
+
+fn parseConstraints(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.Constraints, lexer.Position } {
+    _ = allocator; _ = input; _ = loc;
+    @panic("parseConstraints: not implemented");
+}
+
+
+
+
+fn parseType(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.Type, lexer.Position } {
+    const prim, const new_loc = try parsePrimitiveType(allocator, input, loc);
+    return .{ ast.Type{ .primitive_type = prim }, new_loc };
+}
+
+
+fn parsePrimitiveType(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.PrimitiveType, lexer.Position } {
+    _ = allocator;
+    const tok, const new_loc = try expectToken(input, loc);
+    switch (tok) {
+        .keyword_token => |k| {
+            const prim: ast.PrimitiveTypeEnum = switch (k.token_type.?) {
+                .num_   => .NumType,
+                .int_   => .IntType,
+                .float_ => .RealType,
+                .str_   => .StringType,
+                .void_  => .VoidType,
+                else    => return ParseError.ExpectedType,
+            };
+            return .{ ast.PrimitiveType{ .primitive_type = prim }, new_loc };
+        },
+        else => return ParseError.ExpectedType,
+    }
+}
+
+
+fn parseStatement(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.Statement, lexer.Position } {
+    const peek = peekToken(input, loc) orelse return ParseError.UnexpectedEof;
+    switch (peek) {
+        .keyword_token => |k| switch (k.token_type.?) {
+            .var_ => {
+                const node, const new_loc = try parseVarDeclaration(allocator, input, loc);
+                return .{ ast.Statement{ .var_decl = node }, new_loc };
+            },
+            else => return ParseError.UnexpectedToken,
+        },
+        else => return ParseError.UnexpectedToken,
+    }
+}
+
+fn parseAssignmentStmt(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !ast.AssignmentStmt {
+    _ = allocator; _ = input; _ = loc;
+    @panic("parseAssignmentStmt: not implemented");
+}
+
+
+fn parseBinaryOp(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.BinaryOp, lexer.Position } {
+    _ = allocator; _ = input; _ = loc;
+    @panic("parseBinaryOp: not implemented — needs Pratt parser");
+}
+
+
+fn parseUnaryOp(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.UnaryOp, lexer.Position } {
+    _ = allocator; _ = input; _ = loc;
+    @panic("parseUnaryOp: not implemented");
+}
+
+
+fn parseProcCall(allocator: std.mem.Allocator, input: []const u8, loc: lexer.Position) !struct { ast.FunctionCall, lexer.Position } {
+    _ = allocator; _ = input; _ = loc;
+    @panic("parseProcCall: not implemented");
+}
+
+
+// --------------------------------------------------------
+// Helpers
+// --------------------------------------------------------
+
+// Consume next token or return UnexpectedEof
+fn expectToken(input: []const u8, loc: lexer.Position) !struct { lexer.Token, lexer.Position } {
+    const tok, const new_loc = tokenizer.emitToken(loc, input);
+    if (tok == null) return ParseError.UnexpectedEof;
+    return .{ tok.?, new_loc };
+}
+
+// Peek without advancing
+fn peekToken(input: []const u8, loc: lexer.Position) ?lexer.Token {
+    const tok, _ = tokenizer.emitToken(loc, input);
+    return tok;
+}
+
+fn tokenSlice(tok: lexer.Token, input: []const u8) []const u8 {
+    return switch (tok) {
+        inline else => |inner| input[inner.position..inner.offset],
+    };
+}
+
+fn expectKeyword(input: []const u8, loc: lexer.Position, kw: lexer.Keyword) !lexer.Position {
+    const tok, const new_loc = try expectToken(input, loc);
+    switch (tok) {
+        .keyword_token => |k| {
+            if (k.token_type == kw) return new_loc;
+            return ParseError.UnexpectedToken;
+        },
+        else => return ParseError.ExpectedKeyword,
+    }
+}
+
+fn expectSymbol(input: []const u8, loc: lexer.Position, sym: lexer.BluntSymbol) !lexer.Position {
+    const tok, const new_loc = try expectToken(input, loc);
+    switch (tok) {
+        .blunt_symbol => |s| {
+            if (s.token_type == sym) return new_loc;
+            return ParseError.UnexpectedToken;
+        },
+        else => return ParseError.ExpectedSymbol,
+    }
+}
+
+fn expectIdentifier(input: []const u8, loc: lexer.Position) !struct { lexer.Token, lexer.Position } {
+    const tok, const new_loc = try expectToken(input, loc);
+    switch (tok) {
+        .identifier_token => return .{ tok, new_loc },
+        else => return ParseError.ExpectedIdentifier,
+    }
+}
+
+
+fn expectStringLiteral(input: []const u8, loc: lexer.Position) !struct { lexer.Token, lexer.Position } {
+    const tok, const new_loc = try expectToken(input, loc);
+    switch (tok) {
+        .str_lit_double => return .{ tok, new_loc },
+        else => return ParseError.ExpectedIdentifier,
+    }
+}
